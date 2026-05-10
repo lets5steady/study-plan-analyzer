@@ -12,6 +12,35 @@ import {
 } from '../../utils/learningModes';
 import type { Topic } from '../../types';
 
+// ─── StatChip ─────────────────────────────────────────────────────────────────
+
+function StatChip({
+  label, value, color, title,
+}: {
+  label: string;
+  value: string;
+  color?: 'emerald' | 'blue' | 'amber';
+  title?: string;
+}) {
+  const valueColor =
+    color === 'emerald' ? 'text-emerald-700 dark:text-emerald-400' :
+    color === 'blue'    ? 'text-blue-700 dark:text-blue-400' :
+    color === 'amber'   ? 'text-amber-700 dark:text-amber-400' :
+    'text-gray-700 dark:text-gray-300';
+
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center gap-1 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-0.5"
+    >
+      <span className="text-[11px] text-gray-400 dark:text-gray-500">{label}</span>
+      <span className={cn('text-xs font-semibold tabular-nums', valueColor)}>{value}</span>
+    </span>
+  );
+}
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+
 const COLORS = [
   '#56A3A1', '#70A1AD', '#CB855D', '#D17A7A',
   '#8A82B8', '#B882A8', '#4D9E7A', '#C9A84A',
@@ -293,15 +322,17 @@ export function SubjectCard({ subjectId }: SubjectCardProps) {
 
       {/* ── EVM summary strip ─────────────────────────────────────────────── */}
       {m && open && !editingProject && (
-        <div className="flex gap-4 px-5 py-2 bg-gray-50 dark:bg-gray-800/40 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 flex-wrap">
-          <span title="全体の予定学習時間 (BAC)">予定 <strong>{m.bac.toFixed(1)}h</strong></span>
-          <span title="達成した学習量 (EV)">達成 <strong>{m.ev.toFixed(1)}h</strong></span>
-          <span title="実際に使った時間 (AC)">実績 <strong>{m.ac.toFixed(1)}h</strong></span>
-          <span title="残り予想時間 (ETC)">残り約 <strong>{m.etc.toFixed(1)}h</strong></span>
+        <div className="flex gap-1.5 px-5 py-2.5 bg-gray-50 dark:bg-gray-800/40 border-t border-gray-100 dark:border-gray-800 flex-wrap">
+          <StatChip label="予定" value={`${m.bac.toFixed(1)}h`} title="全体の予定学習時間 (BAC)" />
+          <StatChip label="達成" value={`${m.ev.toFixed(1)}h`} color="emerald" title="達成した学習量 (EV)" />
+          <StatChip label="実績" value={`${m.ac.toFixed(1)}h`} color="blue" title="実際に使った時間 (AC)" />
+          <StatChip label="残り" value={`約 ${m.etc.toFixed(1)}h`} color="amber" title="残り予想時間 (ETC)" />
           {m.forecastCompletionDate && (
-            <span title="このペースでの完了予測日">
-              完了予測 <strong>{new Date(m.forecastCompletionDate).toLocaleDateString('ja-JP')}</strong>
-            </span>
+            <StatChip
+              label="完了予測"
+              value={new Date(m.forecastCompletionDate).toLocaleDateString('ja-JP')}
+              title="このペースでの完了予測日"
+            />
           )}
         </div>
       )}

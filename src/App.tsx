@@ -65,7 +65,7 @@ function AppContent() {
             />
 
             {/* Import / Export */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">
+            <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">
               <span className="text-sm text-gray-500 dark:text-gray-400">データのバックアップ・復元</span>
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" onClick={exportJSON}>
@@ -99,7 +99,9 @@ function AppContent() {
 
             {data.subjects.length === 0 ? (
               <div className="text-center py-20">
-                <div className="text-5xl mb-4">📖</div>
+                <svg className="w-14 h-14 mb-4 mx-auto text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                  </svg>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
                   プロジェクトを追加して学習計画を始めましょう
                 </p>
@@ -131,7 +133,9 @@ function AppContent() {
 
             {data.subjects.length === 0 ? (
               <div className="text-center py-20 text-gray-400 dark:text-gray-600">
-                <div className="text-4xl mb-3">📊</div>
+                <svg className="w-12 h-12 mb-3 mx-auto text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                  </svg>
                 <p className="text-sm">プロジェクトを追加するとグラフが表示されます</p>
               </div>
             ) : (
@@ -140,7 +144,7 @@ function AppContent() {
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                   <div className="mb-4">
                     <h2 className="font-semibold text-gray-800 dark:text-gray-200">
-                      🎯 目標ペースとの比較
+                      目標ペースとの比較
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                       累積進捗グラフ： 計画（緑）と実績（オレンジ）の比較です。線がエリアに重なるほど計画通り、エリアより上なら予定を前倒しで進めています。
@@ -153,7 +157,7 @@ function AppContent() {
                 <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                   <div className="mb-4">
                     <h2 className="font-semibold text-gray-800 dark:text-gray-200">
-                      📅 日ごとの達成状況
+                      日ごとの達成状況
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                       デイリー実績： 1日の目標時間（点線）に対する達成度です。目標達成日は緑、未達成日はオレンジで色分けされます。

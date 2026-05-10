@@ -114,6 +114,46 @@ export function getStatusDiagnosis(
   return DIAGNOSES.ideal;                    // both in buffer
 }
 
+// ─── Diagnosis SVG icons ─────────────────────────────────────────────────────
+
+function DiagnosisIcon({ diagKey, labelColor }: { diagKey: DiagnosisKey; labelColor: string }) {
+  const cls = cn('w-5 h-5 shrink-0', labelColor);
+  switch (diagKey) {
+    case 'restart':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      );
+    case 'ideal':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      );
+    case 'overloaded':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      );
+    case 'efficient':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+        </svg>
+      );
+    case 'burnout':
+      return null;
+    case 'highperf':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+        </svg>
+      );
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface StatusDiagnosisProps {
@@ -135,16 +175,6 @@ export function StatusDiagnosis({
     if (d.actionType === 'reschedule') onReschedule?.();
   };
 
-  // Icon per key
-  const icon: Record<DiagnosisKey, string> = {
-    restart:   '🔄',
-    ideal:     '✅',
-    overloaded:'⚡',
-    efficient: '🎯',
-    burnout:   '⚠️',
-    highperf:  '🚀',
-  };
-
   return (
     <div className={cn(
       'rounded-2xl border border-gray-100 dark:border-gray-800 border-l-4 bg-white dark:bg-gray-900 shadow-sm p-5',
@@ -152,7 +182,7 @@ export function StatusDiagnosis({
     )}>
       {/* Header */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <span className="text-lg">{icon[d.key]}</span>
+        <DiagnosisIcon diagKey={d.key} labelColor={d.labelColor} />
         <span className={cn('text-base font-bold', d.labelColor)}>{d.label}</span>
         {isRescheduledToday && d.key !== 'restart' && (
           <Badge variant="info">計画見直し済み</Badge>
@@ -197,7 +227,7 @@ export function StatusDiagnosis({
       )}
       {d.actionType === 'none' && (
         <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300">
-          {d.action} ✓
+          {d.action}
         </span>
       )}
     </div>

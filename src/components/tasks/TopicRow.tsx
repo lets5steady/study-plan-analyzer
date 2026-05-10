@@ -83,13 +83,6 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
     }
   }, [expanded]);
 
-  const statusColors: Record<string, string> = {
-    completed:   'text-emerald-600 dark:text-emerald-400',
-    in_progress: 'text-amber-500',
-    not_started: 'text-gray-400',
-    paused:      'text-gray-400',
-  };
-
   const subject = data.subjects.find((s) => s.id === subjectId);
   const weeklyHours = subject?.targetHoursPerWeek ?? 7;
 
@@ -191,65 +184,62 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
       {/* ── Row header ──────────────────────────────────────────────────── */}
       <div
         className={cn(
-          'flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors',
+          'flex flex-col px-4 py-3 cursor-pointer transition-colors',
           expanded
             ? 'bg-emerald-100 dark:bg-emerald-700/30 rounded-t-xl'
             : 'bg-white dark:bg-gray-900 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/40',
         )}
         onClick={() => setExpanded((v) => !v)}
       >
-        <span className={cn(
-          'w-2 h-2 rounded-full shrink-0',
-          topic.status === 'completed'   && 'bg-emerald-500',
-          topic.status === 'in_progress' && 'bg-amber-400',
-          (topic.status === 'not_started' || topic.status === 'paused') && 'bg-gray-300 dark:bg-gray-600',
-        )} />
-
-        <div className="flex-1 min-w-0">
+        {/* 上段: ステータスドット + トピック名 + 状態アイコン + 展開矢印 */}
+        <div className="flex items-center gap-2.5">
           <span className={cn(
-            'text-sm font-medium truncate',
+            'w-2 h-2 rounded-full shrink-0',
+            topic.status === 'completed'   && 'bg-emerald-500',
+            topic.status === 'in_progress' && 'bg-amber-400',
+            (topic.status === 'not_started' || topic.status === 'paused') && 'bg-gray-300 dark:bg-gray-600',
+          )} />
+          <span className={cn(
+            'flex-1 min-w-0 block text-sm font-medium truncate',
             topic.status === 'completed'
               ? 'line-through text-gray-400 dark:text-gray-600'
               : 'text-gray-800 dark:text-gray-200',
           )}>
             {topic.name}
           </span>
-          <ProgressBar value={topic.completionPercent} className="mt-1 w-32" />
+          <span className={cn('text-sm text-gray-400 transition-transform shrink-0', expanded ? 'rotate-180' : '')}>▼</span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-sm text-gray-400 hidden sm:inline" title="達成した学習量 (Earned Value)">
-            達成 {evEstimate.toFixed(1)}h
+        {/* 下段: プログレスバー + 達成/予定時間 + 編集・削除ボタン */}
+        <div className="flex items-center gap-2 mt-2 pl-[18px]">
+          <ProgressBar value={topic.completionPercent} className="flex-1 max-w-[100px] sm:max-w-xs" />
+          <span className="text-xs text-gray-400 hidden sm:inline ml-1" title="達成した学習量 (Earned Value)">
+            達成 {evEstimate.toFixed(1)}h ／予定 {topic.plannedHours}h
           </span>
-          <span className="text-sm text-gray-400 hidden sm:inline">／予定 {topic.plannedHours}h</span>
-          <span className={cn('text-sm', statusColors[topic.status])}>
-            {topic.status === 'completed' ? '✓' : topic.status === 'in_progress' ? '▶' : '○'}
-          </span>
-          {/* Topic edit button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setEditTopicName(topic.name);
-              setEditTopicHours(topic.plannedHours);
-              setExpanded(true);
-              setEditingTopic((v) => !v);
-            }}
-            className="flex items-center gap-0.5 text-sm text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors px-1.5 py-1 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-            title="トピックを編集"
-          >
-            <span className="hidden sm:inline">✎ 編集</span>
-            <span className="sm:hidden">✎</span>
-          </button>
-          {/* Topic delete button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onDeleteTopic(); }}
-            className="text-sm text-gray-400 hover:text-red-400 dark:hover:text-red-500 transition-colors px-1.5 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
-            title="トピックを削除"
-          >
-            <span className="hidden sm:inline">削除</span>
-            <span className="sm:hidden">✕</span>
-          </button>
-          <span className={cn('text-sm text-gray-400 transition-transform ml-0.5', expanded ? 'rotate-180' : '')}>▼</span>
+          <div className="flex items-center gap-0.5 ml-auto shrink-0">
+            {/* 編集ボタン */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditTopicName(topic.name);
+                setEditTopicHours(topic.plannedHours);
+                setExpanded(true);
+                setEditingTopic((v) => !v);
+              }}
+              className="flex items-center justify-center gap-0.5 text-sm text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors px-2.5 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 min-h-[36px]"
+              title="トピックを編集"
+            >
+              ✎ 編集
+            </button>
+            {/* 削除ボタン */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDeleteTopic(); }}
+              className="flex items-center justify-center text-sm text-gray-400 hover:text-red-400 dark:hover:text-red-500 transition-colors px-2.5 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 min-h-[36px]"
+              title="トピックを削除"
+            >
+              削除
+            </button>
+          </div>
         </div>
       </div>
 
@@ -379,7 +369,7 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
 
             {newSubName === '' && (
               <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 leading-relaxed">
-                💡 タスクをさらに細かく登録すると、分析グラフがより正確になります。空欄のまま追加するとトピック名がそのまま使われます。
+                タスクをさらに細かく登録すると、分析グラフがより正確になります。空欄のまま追加するとトピック名がそのまま使われます。
               </p>
             )}
           </div>
