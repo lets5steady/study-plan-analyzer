@@ -23,8 +23,14 @@ type Tab = 'dashboard' | 'tasks' | 'analytics';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [addOpen, setAddOpen] = useState(false);
-  const { data, setData, resetData } = useStorageContext();
+  const { data, setData, resetData, exportJSON, importJSON } = useStorageContext();
   const { regenerateSchedule } = useEVM();
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) importJSON(file);
+    e.target.value = '';
+  };
 
   const loadSample = () => {
     const sample = buildSampleData();
@@ -57,6 +63,20 @@ function AppContent() {
               onNavigate={setActiveTab}
               onReschedule={regenerateSchedule}
             />
+
+            {/* Import / Export */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">
+              <span className="text-sm text-gray-500 dark:text-gray-400">データのバックアップ・復元</span>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={exportJSON}>
+                  エクスポート
+                </Button>
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                  インポート
+                  <input type="file" accept=".json" className="hidden" onChange={handleImport} />
+                </label>
+              </div>
+            </div>
           </section>
         )}
 

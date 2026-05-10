@@ -1,5 +1,4 @@
 import { useTheme } from '../../context/ThemeContext';
-import { useStorageContext } from '../../context/StorageContext';
 import { Button } from '../ui';
 import { cn } from '../../utils/cn';
 
@@ -18,18 +17,11 @@ const tabs: { id: Tab; label: string; icon: string }[] = [
 
 export function Header({ activeTab, onTabChange }: HeaderProps) {
   const { theme, setTheme } = useTheme();
-  const { exportJSON, importJSON } = useStorageContext();
 
   const toggleTheme = () =>
     setTheme(theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark');
 
-  const themeLabel = theme === 'dark' ? '🌙' : theme === 'light' ? '☀️' : '💻';
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) importJSON(file);
-    e.target.value = '';
-  };
+  const themeLabel = theme === 'dark' ? 'ダーク' : theme === 'light' ? 'ライト' : 'システム';
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-gray-950/90 backdrop-blur border-b border-gray-100 dark:border-gray-800">
@@ -57,8 +49,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                   : 'text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60',
               )}
             >
-              <span className="text-xs">{t.icon}</span>
-              <span className="hidden sm:inline">{t.label}</span>
+              {t.label}
             </button>
           ))}
         </nav>
@@ -68,15 +59,6 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
           <Button variant="ghost" size="sm" onClick={toggleTheme} title="テーマ切替">
             {themeLabel}
           </Button>
-          <Button variant="ghost" size="sm" onClick={exportJSON} title="JSONエクスポート">
-            <span className="hidden sm:inline">↑ Export</span>
-            <span className="sm:hidden">↑</span>
-          </Button>
-          <label title="JSONインポート" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
-            <span className="hidden sm:inline">↓ Import</span>
-            <span className="sm:hidden">↓</span>
-            <input type="file" accept=".json" className="hidden" onChange={handleImport} />
-          </label>
         </div>
       </div>
     </header>
