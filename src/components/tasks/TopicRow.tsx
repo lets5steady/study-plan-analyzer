@@ -218,10 +218,10 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <span className="text-sm text-gray-400" title="達成した学習量 (Earned Value)">
+          <span className="text-sm text-gray-400 hidden sm:inline" title="達成した学習量 (Earned Value)">
             達成 {evEstimate.toFixed(1)}h
           </span>
-          <span className="text-sm text-gray-400">／予定 {topic.plannedHours}h</span>
+          <span className="text-sm text-gray-400 hidden sm:inline">／予定 {topic.plannedHours}h</span>
           <span className={cn('text-sm', statusColors[topic.status])}>
             {topic.status === 'completed' ? '✓' : topic.status === 'in_progress' ? '▶' : '○'}
           </span>
@@ -236,13 +236,19 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
             }}
             className="flex items-center gap-0.5 text-sm text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors px-1.5 py-1 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
             title="トピックを編集"
-          >✎ 編集</button>
+          >
+            <span className="hidden sm:inline">✎ 編集</span>
+            <span className="sm:hidden">✎</span>
+          </button>
           {/* Topic delete button */}
           <button
             onClick={(e) => { e.stopPropagation(); onDeleteTopic(); }}
             className="text-sm text-gray-400 hover:text-red-400 dark:hover:text-red-500 transition-colors px-1.5 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20"
             title="トピックを削除"
-          >削除</button>
+          >
+            <span className="hidden sm:inline">削除</span>
+            <span className="sm:hidden">✕</span>
+          </button>
           <span className={cn('text-sm text-gray-400 transition-transform ml-0.5', expanded ? 'rotate-180' : '')}>▼</span>
         </div>
       </div>
@@ -364,7 +370,7 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
                 type="text"
                 value={newSubName}
                 onChange={(e) => setNewSubName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleAddSubtask()}
                 placeholder={topic.name}
                 className="flex-1 text-sm px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600"
               />
@@ -390,7 +396,7 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
                   type="text"
                   value={editTopicName}
                   onChange={(e) => setEditTopicName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTopicEdit()}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleSaveTopicEdit()}
                   className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </label>
@@ -535,7 +541,7 @@ function TaskItem({
             value={editValue}
             onChange={(e) => onEditChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') onEditSave();
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) onEditSave();
               if (e.key === 'Escape') onEditCancel();
             }}
             onBlur={onEditSave}

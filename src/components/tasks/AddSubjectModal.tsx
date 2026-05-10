@@ -118,7 +118,7 @@ export function AddSubjectModal({ open, onClose }: AddSubjectModalProps) {
         {/* Learning mode selector */}
         <div className="flex flex-col gap-2">
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">学習モード</span>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {LEARNING_MODES.map((mode) => (
               <button
                 key={mode.id}

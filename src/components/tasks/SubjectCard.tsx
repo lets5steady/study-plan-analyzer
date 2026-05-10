@@ -130,7 +130,7 @@ export function SubjectCard({ subjectId }: SubjectCardProps) {
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && saveEditProject()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && saveEditProject()}
                 className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </label>
@@ -174,7 +174,7 @@ export function SubjectCard({ subjectId }: SubjectCardProps) {
           {/* Learning mode selector */}
           <div className="flex flex-col gap-1.5">
             <span className="text-sm text-gray-500 dark:text-gray-400">学習モード</span>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               {LEARNING_MODES.map((mode) => (
                 <button
                   key={mode.id}
@@ -235,27 +235,50 @@ export function SubjectCard({ subjectId }: SubjectCardProps) {
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{subject.name}</h3>
               {subject.description && (
-                <span className="text-sm text-gray-400 truncate">{subject.description}</span>
+                <span className="text-sm text-gray-400 truncate hidden sm:inline">{subject.description}</span>
               )}
             </div>
             {m && <ProgressBar value={m.percentComplete} className="mt-1.5 max-w-xs" />}
+            {/* Badges — mobile only, shown below progress bar */}
+            {m && (
+              <div className="flex gap-1.5 flex-wrap mt-1.5 sm:hidden">
+                <Badge variant={spiVariant(m.spi)}>
+                  {m.spi >= 1.0 ? '順調 ✓' : m.spi >= 0.9 ? 'やや遅れ' : 'ペース注意'}
+                </Badge>
+                <Badge variant={m.cpi >= 1 ? 'success' : m.cpi >= 0.9 ? 'warning' : 'danger'}>
+                  効率 {m.cpi.toFixed(2)}
+                </Badge>
+                {daysLeft !== null && (
+                  <Badge variant={daysLeft < 14 ? 'danger' : daysLeft < 30 ? 'warning' : 'neutral'}>
+                    残 {daysLeft}日
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Badges — desktop only */}
             {m && (
-              <Badge variant={spiVariant(m.spi)}>
-                {m.spi >= 1.0 ? '順調 ✓' : m.spi >= 0.9 ? 'やや遅れ' : 'ペース注意'}
-              </Badge>
+              <span className="hidden sm:inline-flex">
+                <Badge variant={spiVariant(m.spi)}>
+                  {m.spi >= 1.0 ? '順調 ✓' : m.spi >= 0.9 ? 'やや遅れ' : 'ペース注意'}
+                </Badge>
+              </span>
             )}
             {m && (
-              <Badge variant={m.cpi >= 1 ? 'success' : m.cpi >= 0.9 ? 'warning' : 'danger'}>
-                効率 {m.cpi.toFixed(2)}
-              </Badge>
+              <span className="hidden sm:inline-flex">
+                <Badge variant={m.cpi >= 1 ? 'success' : m.cpi >= 0.9 ? 'warning' : 'danger'}>
+                  効率 {m.cpi.toFixed(2)}
+                </Badge>
+              </span>
             )}
             {daysLeft !== null && (
-              <Badge variant={daysLeft < 14 ? 'danger' : daysLeft < 30 ? 'warning' : 'neutral'}>
-                目標まで {daysLeft}日
-              </Badge>
+              <span className="hidden sm:inline-flex">
+                <Badge variant={daysLeft < 14 ? 'danger' : daysLeft < 30 ? 'warning' : 'neutral'}>
+                  目標まで {daysLeft}日
+                </Badge>
+              </span>
             )}
             {/* Edit button — stops propagation so it doesn't toggle open */}
             <button
@@ -313,7 +336,7 @@ export function SubjectCard({ subjectId }: SubjectCardProps) {
                   type="text"
                   value={newTopicName}
                   onChange={(e) => setNewTopicName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddTopic()}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleAddTopic()}
                   placeholder="例：非同期処理 / useEffect"
                   className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />

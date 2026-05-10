@@ -69,10 +69,12 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
             {themeLabel}
           </Button>
           <Button variant="ghost" size="sm" onClick={exportJSON} title="JSONエクスポート">
-            ↑ Export
+            <span className="hidden sm:inline">↑ Export</span>
+            <span className="sm:hidden">↑</span>
           </Button>
           <label title="JSONインポート" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
-            ↓ Import
+            <span className="hidden sm:inline">↓ Import</span>
+            <span className="sm:hidden">↓</span>
             <input type="file" accept=".json" className="hidden" onChange={handleImport} />
           </label>
         </div>
