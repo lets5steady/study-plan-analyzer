@@ -142,7 +142,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       ref={ref}
       onClose={onClose}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85dvh] rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl backdrop:bg-black/40 p-0 open:flex open:flex-col"
+      className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85vh] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl backdrop:bg-black/40 p-0 flex flex-col"
     >
       {/* header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
