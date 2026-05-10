@@ -207,7 +207,7 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
 
         <div className="flex-1 min-w-0">
           <span className={cn(
-            'text-sm font-medium truncate',
+            'block text-sm font-medium truncate',
             topic.status === 'completed'
               ? 'line-through text-gray-400 dark:text-gray-600'
               : 'text-gray-800 dark:text-gray-200',

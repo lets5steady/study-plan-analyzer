@@ -65,7 +65,7 @@ function AppContent() {
             />
 
             {/* Import / Export */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">
+            <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">
               <span className="text-sm text-gray-500 dark:text-gray-400">データのバックアップ・復元</span>
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" onClick={exportJSON}>
