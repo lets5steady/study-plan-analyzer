@@ -212,17 +212,27 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
   const cpiColor = m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
     : m.cpi >= 0.9 ? 'text-amber-500' : 'text-red-500';
 
+  // SPI の内訳表示用: リスケ後はデルタ値（増分EV/PV）を使う
+  const spiEV = m.effectiveEV;
+  const spiPV = m.effectivePV;
+  const spiEVLabel = m.isDeltaMode ? '達成した成果 (EV) ※リスケ以降' : '達成した成果 (EV)';
+  const spiPVLabel = m.isDeltaMode ? '予定していた成果 (PV) ※リスケ以降' : '予定していた成果 (PV)';
+  const spiPVSub   = m.isDeltaMode ? '最終リスケ日から本日までの計画量' : 'スケジュール上の本日までの計画量';
+  const spiSVSub   = m.sv >= 0 ? '計画より進んでいます' : '計画より遅れています';
+
   const detailConfigs: Record<Exclude<DetailModalType, null>, KPIDetailConfig> = {
     spi: {
       title: '進捗スピード (SPI) の内訳',
-      description: 'SPIは、予定していた学習量（PV）に対して、実際に達成した成果（EV）の割合を表します。1.0以上なら計画を上回るペース、1.0未満なら遅れている状態です。',
+      description: m.isDeltaMode
+        ? 'リスケ後の計画を基準に、リスケ以降の増分EV ÷ 増分PV で算出します。リスケ以前の完了作業はベースラインとして除外されます。'
+        : 'SPIは、予定していた学習量（PV）に対して、実際に達成した成果（EV）の割合を表します。1.0以上なら計画を上回るペース、1.0未満なら遅れている状態です。',
       rows: [
-        { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
-        { label: '予定していた成果 (PV)', value: `${m.pv.toFixed(2)} pt`, sub: 'スケジュール上の本日までの計画量' },
-        { label: 'スケジュール差異 (SV = EV − PV)', value: `${m.sv >= 0 ? '+' : ''}${m.sv.toFixed(2)} pt`, sub: m.sv >= 0 ? '計画より進んでいます' : '計画より遅れています' },
+        { label: spiEVLabel, value: `${spiEV.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+        { label: spiPVLabel, value: `${spiPV.toFixed(2)} pt`, sub: spiPVSub },
+        { label: 'スケジュール差異 (SV = EV − PV)', value: `${m.sv >= 0 ? '+' : ''}${m.sv.toFixed(2)} pt`, sub: spiSVSub },
       ],
-      formula: `${m.ev.toFixed(2)} ÷ ${m.pv.toFixed(2)} = ${m.spi.toFixed(2)}`,
-      formulaResult: m.spi.toFixed(2),
+      formula: spiPV === 0 ? `（計画初日 — 評価データなし）` : `${spiEV.toFixed(2)} ÷ ${spiPV.toFixed(2)} = ${m.spi.toFixed(2)}`,
+      formulaResult: spiPV === 0 ? '—' : m.spi.toFixed(2),
       resultColor: spiColor,
     },
     cpi: {

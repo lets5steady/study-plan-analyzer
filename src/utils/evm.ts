@@ -132,20 +132,30 @@ export function computeEVMMetrics(
   const baselineDate = settings.lastRescheduledAt;
   const baselineEV   = settings.rescheduleBaselineEVs?.[subject.id] ?? undefined;
 
+  let effectiveEV: number;
+  let effectivePV: number;
+  let isDeltaMode = false;
+
   if (baselineDate && baselineDate !== todayStr && baselineEV !== undefined) {
     // Delta PV: schedule entries from baseline date to today
-    const pvDelta = schedule
+    effectivePV = schedule
       .filter((e) => e.subjectId === subject.id && e.date >= baselineDate && e.date <= todayStr)
       .reduce((sum, e) => sum + e.allocatedHours, 0);
-    const evDelta = Math.max(0, ev - baselineEV);
-    spi = pvDelta === 0 ? 1 : evDelta / pvDelta;
-    sv  = evDelta - pvDelta;
+    effectiveEV = Math.max(0, ev - baselineEV);
+    isDeltaMode = true;
+    spi = effectivePV === 0 ? 1 : effectiveEV / effectivePV;
+    sv  = effectiveEV - effectivePV;
   } else if (baselineDate === todayStr) {
     // Just rescheduled today — too early to evaluate; show neutral
+    effectiveEV = 0;
+    effectivePV = 0;
+    isDeltaMode = true;
     spi = 1;
     sv  = 0;
   } else {
     // No baseline: fall back to absolute EV/PV (first schedule, no reschedule yet)
+    effectiveEV = ev;
+    effectivePV = pv;
     spi = pv === 0 ? 1 : ev / pv;
     sv  = ev - pv;
   }
@@ -185,6 +195,9 @@ export function computeEVMMetrics(
     isOnTrack:
       spi >= settings.spiWarningThreshold &&
       cpi >= settings.cpiWarningThreshold,
+    effectiveEV,
+    effectivePV,
+    isDeltaMode,
   };
 }
 
@@ -208,6 +221,9 @@ export function computeTotalMetrics(
       percentComplete: 0,
       isOnTrack: true,
       forecastCompletionDate: null,
+      effectiveEV: 0,
+      effectivePV: 0,
+      isDeltaMode: false,
     };
   }
 
@@ -216,10 +232,14 @@ export function computeTotalMetrics(
   const ev  = all.reduce((s, m) => s + m.ev,  0);
   const ac  = all.reduce((s, m) => s + m.ac,  0);
 
-  // Aggregate SPI/SV: use BAC-weighted average of per-subject SPIs so that
-  // the delta-based computation at subject level propagates correctly here.
-  const spi = bac === 0 ? 1 : all.reduce((s, m) => s + m.spi * m.bac, 0) / bac;
-  const sv  = all.reduce((s, m) => s + m.sv, 0);
+  // Aggregate effectiveEV/PV (delta values when in delta mode)
+  const effectiveEV = all.reduce((s, m) => s + m.effectiveEV, 0);
+  const effectivePV = all.reduce((s, m) => s + m.effectivePV, 0);
+  const isDeltaMode = all.some((m) => m.isDeltaMode);
+
+  // Aggregate SPI/SV from effective values for consistency with per-subject logic
+  const spi = effectivePV === 0 ? 1 : effectiveEV / effectivePV;
+  const sv  = effectiveEV - effectivePV;
   const cv  = ev - ac;
   const cpi = ac  === 0 ? 1 : ev / ac;
   const eac = cpi < 0.001 ? bac * 999 : bac / cpi;
@@ -245,5 +265,8 @@ export function computeTotalMetrics(
       spi >= settings.spiWarningThreshold &&
       cpi >= settings.cpiWarningThreshold,
     forecastCompletionDate,
+    effectiveEV,
+    effectivePV,
+    isDeltaMode,
   };
 }

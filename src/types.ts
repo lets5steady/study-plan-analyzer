@@ -137,6 +137,12 @@ export interface EVMMetrics {
   forecastCompletionDate: string | null;
   percentComplete: number;
   isOnTrack: boolean;
+  /** EV used for SPI calculation (delta from baseline when post-reschedule, else absolute) */
+  effectiveEV: number;
+  /** PV used for SPI calculation (delta from baseline when post-reschedule, else absolute) */
+  effectivePV: number;
+  /** True when displaying delta (post-reschedule) values instead of absolute */
+  isDeltaMode: boolean;
 }
 
 // ─── App settings ─────────────────────────────────────────────────────────────
