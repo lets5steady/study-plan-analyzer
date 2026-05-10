@@ -83,13 +83,6 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
     }
   }, [expanded]);
 
-  const statusColors: Record<string, string> = {
-    completed:   'text-emerald-600 dark:text-emerald-400',
-    in_progress: 'text-amber-500',
-    not_started: 'text-gray-400',
-    paused:      'text-gray-400',
-  };
-
   const subject = data.subjects.find((s) => s.id === subjectId);
   const weeklyHours = subject?.targetHoursPerWeek ?? 7;
 
@@ -214,9 +207,6 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
           )}>
             {topic.name}
           </span>
-          <span className={cn('text-sm shrink-0', statusColors[topic.status])}>
-            {topic.status === 'completed' ? '✓' : topic.status === 'in_progress' ? '▶' : '○'}
-          </span>
           <span className={cn('text-sm text-gray-400 transition-transform shrink-0', expanded ? 'rotate-180' : '')}>▼</span>
         </div>
 
@@ -236,20 +226,18 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
                 setExpanded(true);
                 setEditingTopic((v) => !v);
               }}
-              className="flex items-center justify-center gap-0.5 text-sm text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors px-2.5 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 min-w-[40px] min-h-[36px]"
+              className="flex items-center justify-center gap-0.5 text-sm text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors px-2.5 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/30 min-h-[36px]"
               title="トピックを編集"
             >
-              <span className="hidden sm:inline">✎ 編集</span>
-              <span className="sm:hidden">✎</span>
+              ✎ 編集
             </button>
             {/* 削除ボタン */}
             <button
               onClick={(e) => { e.stopPropagation(); onDeleteTopic(); }}
-              className="flex items-center justify-center text-sm text-gray-400 hover:text-red-400 dark:hover:text-red-500 transition-colors px-2.5 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 min-w-[40px] min-h-[36px]"
+              className="flex items-center justify-center text-sm text-gray-400 hover:text-red-400 dark:hover:text-red-500 transition-colors px-2.5 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 min-h-[36px]"
               title="トピックを削除"
             >
-              <span className="hidden sm:inline">削除</span>
-              <span className="sm:hidden">✕</span>
+              削除
             </button>
           </div>
         </div>

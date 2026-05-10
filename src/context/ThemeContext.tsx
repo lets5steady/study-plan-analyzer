@@ -3,6 +3,17 @@ import type { AppSettings } from '../types';
 
 type Theme = AppSettings['theme'];
 
+const THEME_KEY = 'study_plan_theme';
+const DEFAULT_THEME: Theme = 'dark';
+
+function loadTheme(): Theme {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+  } catch { /* ignore */ }
+  return DEFAULT_THEME;
+}
+
 interface ThemeContextValue {
   theme: Theme;
   setTheme: (t: Theme) => void;
@@ -10,14 +21,19 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'system',
+  theme: DEFAULT_THEME,
   setTheme: () => {},
-  isDark: false,
+  isDark: true,
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>(loadTheme);
   const [isDark, setIsDark] = useState(false);
+
+  const setTheme = (t: Theme) => {
+    try { localStorage.setItem(THEME_KEY, t); } catch { /* ignore */ }
+    setThemeState(t);
+  };
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
