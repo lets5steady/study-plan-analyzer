@@ -1,6 +1,7 @@
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../ui';
 import { cn } from '../../utils/cn';
+import iconPng from '../../assets/icon.png';
 
 type Tab = 'dashboard' | 'tasks' | 'analytics';
 
@@ -28,9 +29,7 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-4 h-14">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white font-bold text-sm select-none">
-            S
-          </span>
+          <img src={iconPng} alt="Study Plan Analyzer" className="w-7 h-7 rounded-lg object-cover" />
           <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 hidden sm:block">
             Study Plan Analyzer
           </span>
