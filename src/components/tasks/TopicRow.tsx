@@ -379,7 +379,7 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
 
             {newSubName === '' && (
               <p className="text-xs text-gray-400 dark:text-gray-600 mt-2 leading-relaxed">
-                💡 タスクをさらに細かく登録すると、分析グラフがより正確になります。空欄のまま追加するとトピック名がそのまま使われます。
+                タスクをさらに細かく登録すると、分析グラフがより正確になります。空欄のまま追加するとトピック名がそのまま使われます。
               </p>
             )}
           </div>

@@ -131,15 +131,15 @@ function SubjectMiniCard({ subjectId, showTech }: { subjectId: string; showTech:
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function spiToLabel(spi: number): string {
-  if (spi >= 1.1) return '計画より速い ✨';
-  if (spi >= 1.0) return '計画通り ✓';
+  if (spi >= 1.1) return '計画より速い';
+  if (spi >= 1.0) return '計画通り';
   if (spi >= 0.9) return 'やや遅れ気味';
   return 'ペースを上げよう';
 }
 
 function cpiToLabel(cpi: number): string {
-  if (cpi >= 1.1) return '効率よく進んでいます ✨';
-  if (cpi >= 1.0) return '集中できています ✓';
+  if (cpi >= 1.1) return '効率よく進んでいます';
+  if (cpi >= 1.0) return '集中できています';
   if (cpi >= 0.9) return '少し時間がかかっています';
   return '取り組み方を見直そう';
 }
@@ -450,7 +450,7 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
       {rescheduledToday ? (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-sm font-semibold shrink-0">
-            ✓ リスケジュール済み
+            リスケジュール済み
           </span>
           <span className="text-sm text-blue-600 dark:text-blue-400">
             本日スケジュールを見直しました。新しい計画に基づいて学習を進めましょう。
@@ -475,7 +475,9 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
       {/* Empty state */}
       {data.subjects.length === 0 && (
         <div className="text-center py-16 text-gray-400 dark:text-gray-600">
-          <div className="text-5xl mb-3">📚</div>
+          <svg className="w-14 h-14 mb-3 mx-auto text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+          </svg>
           <p className="text-sm">プロジェクトを追加すると学習の進み具合が表示されます</p>
         </div>
       )}
