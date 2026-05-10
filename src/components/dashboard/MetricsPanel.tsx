@@ -81,15 +81,15 @@ interface KPIDetailConfig {
 function DetailRow({ label, value, sub, highlight }: CalcRow) {
   return (
     <div className={cn(
-      'flex items-start justify-between gap-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0',
-      highlight && 'bg-emerald-50/50 dark:bg-emerald-900/10 -mx-4 px-4 rounded-lg',
+      'flex items-start justify-between gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0',
+      highlight && 'bg-emerald-50/50 dark:bg-emerald-900/10 -mx-3 px-3 rounded-lg',
     )}>
-      <span className="text-sm text-gray-500 dark:text-gray-400 leading-snug">{label}</span>
-      <div className="text-right shrink-0">
-        <span className={cn('text-sm font-semibold tabular-nums', highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200')}>
+      <span className="flex-1 min-w-0 text-xs text-gray-500 dark:text-gray-400 leading-snug">{label}</span>
+      <div className="text-right shrink-0 ml-2">
+        <span className={cn('text-xs font-semibold tabular-nums', highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200')}>
           {value}
         </span>
-        {sub && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{sub}</p>}
+        {sub && <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -350,15 +350,15 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
           {(() => {
             const cfg = detailConfigs[detailModal];
             return (
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {/* Description */}
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800 rounded-xl px-4 py-3">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800 rounded-xl px-3 py-2.5">
                   {cfg.description}
                 </p>
 
                 {/* Data rows */}
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">根拠データ</h3>
+                  <h3 className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">根拠データ</h3>
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {cfg.rows.map((row) => (
                       <DetailRow key={row.label} {...row} />
@@ -367,15 +367,15 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
                 </div>
 
                 {/* Formula */}
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-4 py-4">
-                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">計算式</p>
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <code className="font-mono text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-3">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">計算式</p>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <code className="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 break-all">
                       {cfg.formula}
                     </code>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400 dark:text-gray-500">結果</span>
-                      <span className={cn('text-2xl font-bold tabular-nums', cfg.resultColor)}>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">結果</span>
+                      <span className={cn('text-xl font-bold tabular-nums', cfg.resultColor)}>
                         {cfg.formulaResult}
                       </span>
                     </div>
