@@ -153,6 +153,12 @@ export interface AppSettings {
   /** ISO date (YYYY-MM-DD) of the most recent manual reschedule. Used to suppress the
    *  schedule-risk alert on the same day the user pressed "スケジュールを組み直す". */
   lastRescheduledAt: string | null;
+  /**
+   * Per-subject EV snapshot taken at the last reschedule/schedule-generation.
+   * Used to compute delta SPI = (EV_now - EV_baseline) / (PV_since_reschedule)
+   * so that pre-schedule completed work doesn't inflate SPI.
+   */
+  rescheduleBaselineEVs: Record<string, number>;
 }
 
 // ─── Root storage schema ─────────────────────────────────────────────────────
@@ -188,6 +194,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cpiWarningThreshold: 0.9,
   weeklyWorkPattern: DEFAULT_WEEKLY_WORK_PATTERN,
   lastRescheduledAt: null,
+  rescheduleBaselineEVs: {},
 };
 
 export const INITIAL_APP_DATA: AppData = {

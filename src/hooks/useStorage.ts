@@ -24,6 +24,7 @@ function migrate(raw: unknown): AppData {
         ...(data.settings?.weeklyWorkPattern ?? {}),
       },
       lastRescheduledAt: data.settings?.lastRescheduledAt ?? null,
+      rescheduleBaselineEVs: data.settings?.rescheduleBaselineEVs ?? {},
     },
     subjects: (data.subjects ?? []).map((s) => ({
       ...s,

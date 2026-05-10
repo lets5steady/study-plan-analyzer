@@ -4,6 +4,7 @@ import type { EVMMetrics, ScheduleEntry } from '../types';
 import {
   computeEVMMetrics,
   computeTotalMetrics,
+  computeEV,
   type TotalEVMMetrics,
 } from '../utils/evm';
 import {
@@ -109,14 +110,27 @@ export function useEVM(): UseEVMReturn {
   );
 
   // ── Schedule actions ─────────────────────────────────────────────────────
+  /** スナップショット: 全 subject の現時点 EV を Record で返す */
+  const snapshotBaselineEVs = useCallback((): Record<string, number> => {
+    const map: Record<string, number> = {};
+    for (const s of data.subjects) map[s.id] = computeEV(s);
+    return map;
+  }, [data.subjects]);
+
   const regenerateSchedule = useCallback(() => {
     const newSchedule = generateSchedule(
       data.subjects,
       data.settings.weeklyWorkPattern,
       today,
     );
-    updateData({ schedule: newSchedule });
-  }, [data.subjects, data.settings.weeklyWorkPattern, today, updateData]);
+    updateData({
+      schedule: newSchedule,
+      settings: {
+        ...data.settings,
+        rescheduleBaselineEVs: snapshotBaselineEVs(),
+      },
+    });
+  }, [data.subjects, data.settings, today, updateData, snapshotBaselineEVs]);
 
   const rescheduleFromToday = useCallback(() => {
     const newSchedule = reschedule(
@@ -128,14 +142,19 @@ export function useEVM(): UseEVMReturn {
     const todayStr = today.toISOString().slice(0, 10);
     updateData({
       schedule: newSchedule,
-      settings: { ...data.settings, lastRescheduledAt: todayStr },
+      settings: {
+        ...data.settings,
+        lastRescheduledAt: todayStr,
+        rescheduleBaselineEVs: snapshotBaselineEVs(),
+      },
     });
   }, [
     data.schedule,
     data.subjects,
-    data.settings.weeklyWorkPattern,
+    data.settings,
     today,
     updateData,
+    snapshotBaselineEVs,
   ]);
 
   const autoRescheduleIfNeeded = useCallback((): boolean => {
@@ -146,15 +165,24 @@ export function useEVM(): UseEVMReturn {
       data.settings.weeklyWorkPattern,
       today,
     );
-    updateData({ schedule: newSchedule });
+    const todayStr = today.toISOString().slice(0, 10);
+    updateData({
+      schedule: newSchedule,
+      settings: {
+        ...data.settings,
+        lastRescheduledAt: todayStr,
+        rescheduleBaselineEVs: snapshotBaselineEVs(),
+      },
+    });
     return true;
   }, [
     hasScheduleRisk,
     data.schedule,
     data.subjects,
-    data.settings.weeklyWorkPattern,
+    data.settings,
     today,
     updateData,
+    snapshotBaselineEVs,
   ]);
 
   return {
