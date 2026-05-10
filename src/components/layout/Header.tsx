@@ -9,10 +9,10 @@ interface HeaderProps {
   onTabChange: (t: Tab) => void;
 }
 
-const tabs: { id: Tab; label: string; icon: string }[] = [
-  { id: 'dashboard', label: 'ダッシュボード', icon: '◎' },
-  { id: 'tasks',     label: 'タスク管理',     icon: '☑' },
-  { id: 'analytics', label: '詳細分析',       icon: '▲' },
+const tabs: { id: Tab; label: string; mobileLabel: string }[] = [
+  { id: 'dashboard', label: 'ダッシュボード /進捗', mobileLabel: '進捗' },
+  { id: 'tasks',     label: 'タスク管理',     mobileLabel: 'タスク' },
+  { id: 'analytics', label: '分析グラフ',     mobileLabel: 'グラフ' },
 ];
 
 export function Header({ activeTab, onTabChange }: HeaderProps) {
@@ -49,7 +49,8 @@ export function Header({ activeTab, onTabChange }: HeaderProps) {
                   : 'text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60',
               )}
             >
-              {t.label}
+              <span className="hidden sm:inline">{t.label}</span>
+              <span className="sm:hidden">{t.mobileLabel}</span>
             </button>
           ))}
         </nav>
