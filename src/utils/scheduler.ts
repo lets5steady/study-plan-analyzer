@@ -49,7 +49,7 @@ interface WorkItem {
 }
 
 /** Build a priority-sorted list of remaining work from all subjects. */
-function buildWorkQueue(subjects: Subject[], today: Date): WorkItem[] {
+export function buildWorkQueue(subjects: Subject[], today: Date): WorkItem[] {
   const todayStr = toDateStr(today);
 
   // Sort subjects: exam date ascending (null last), then plannedStartDate
@@ -194,6 +194,136 @@ export interface ExamRisk {
   examDate: string;
   forecastCompletionDate: string;
   daysAtRisk: number; // positive = will finish AFTER exam
+}
+
+// ─── Today's task plan ───────────────────────────────────────────────────────
+
+/**
+ * A single topic to study today, with its allocated hours for the day.
+ */
+export interface TodayTask {
+  subjectId: string;
+  subjectName: string;
+  topicId: string;
+  topicName: string;
+  /** Hours allocated for this topic today (≤ today's budget). */
+  allocatedHours: number;
+  /** Total remaining hours for this topic across all future days. */
+  remainingHours: number;
+}
+
+/**
+ * The set of topics to work on today, constrained to today's time budget.
+ */
+export interface TodayTaskPlan {
+  date: string;
+  /** Hours available today per WeeklyWorkPattern. */
+  budgetHours: number;
+  /** Topics to study today, in priority order. */
+  tasks: TodayTask[];
+  /** Number of distinct topics. */
+  taskCount: number;
+  /** Sum of allocatedHours across all tasks (≤ budgetHours). */
+  totalAllocatedHours: number;
+}
+
+/**
+ * Compute which topics to study today and how many hours to spend on each.
+ *
+ * Strategy:
+ *   1. Derive today's time budget from WeeklyWorkPattern.
+ *   2. If the schedule already has entries for today (pre-computed),
+ *      use them directly — they already respect the budget.
+ *   3. Otherwise, fall back to the priority-sorted work queue and
+ *      greedily fill today's budget from front to back.
+ *
+ * Topics whose notBefore date is in the future are skipped.
+ * A topic that only partially fits is included with a pro-rated allocatedHours.
+ */
+export function computeTodayTaskPlan(
+  subjects: Subject[],
+  schedule: ScheduleEntry[],
+  pattern: WeeklyWorkPattern,
+  today: Date,
+): TodayTaskPlan {
+  const todayStr = toDateStr(today);
+  const budgetHours = hoursForDate(today, pattern);
+
+  // Fast lookup: topicId → { topic, subject }
+  const topicLookup = new Map(
+    subjects.flatMap((s) =>
+      s.topics.map((t) => [t.id, { topic: t, subject: s }] as const),
+    ),
+  );
+
+  let tasks: TodayTask[];
+
+  const todayEntries = schedule.filter((e) => e.date === todayStr);
+
+  if (todayEntries.length > 0) {
+    // Schedule already covers today — merge by topicId in case of split entries.
+    const merged = new Map<string, TodayTask>();
+
+    for (const entry of todayEntries) {
+      const lookup = topicLookup.get(entry.topicId);
+      if (!lookup) continue;
+      const { topic, subject } = lookup;
+
+      const existing = merged.get(entry.topicId);
+      if (existing) {
+        existing.allocatedHours =
+          Math.round((existing.allocatedHours + entry.allocatedHours) * 1000) / 1000;
+      } else {
+        const remaining = Math.max(0, topic.plannedHours - computeTopicEV(topic));
+        merged.set(entry.topicId, {
+          subjectId: subject.id,
+          subjectName: subject.name,
+          topicId: topic.id,
+          topicName: topic.name,
+          allocatedHours: entry.allocatedHours,
+          remainingHours: Math.round(remaining * 1000) / 1000,
+        });
+      }
+    }
+
+    tasks = Array.from(merged.values());
+  } else {
+    // No schedule for today — derive from the priority-sorted work queue.
+    const queue = buildWorkQueue(subjects, today);
+    tasks = [];
+    let budgetLeft = budgetHours;
+
+    for (const item of queue) {
+      if (budgetLeft <= 0.001) break;
+      if (item.notBefore > todayStr) continue;
+
+      const lookup = topicLookup.get(item.topicId);
+      if (!lookup) continue;
+      const { topic, subject } = lookup;
+
+      const alloc = Math.round(Math.min(budgetLeft, item.remainingHours) * 1000) / 1000;
+      tasks.push({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        topicId: topic.id,
+        topicName: topic.name,
+        allocatedHours: alloc,
+        remainingHours: Math.round(item.remainingHours * 1000) / 1000,
+      });
+      budgetLeft -= alloc;
+    }
+  }
+
+  const totalAllocatedHours =
+    Math.round(tasks.reduce((s, t) => s + t.allocatedHours, 0) * 1000) / 1000;
+
+  return {
+    date: todayStr,
+    budgetHours,
+    tasks,
+    taskCount: tasks.length,
+    totalAllocatedHours,
+  };
 }
 
 /**
