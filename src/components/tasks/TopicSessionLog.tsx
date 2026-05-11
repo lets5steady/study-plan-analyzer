@@ -10,32 +10,10 @@ import {
 } from '../../utils/mutations';
 import type { StudySession } from '../../types';
 
-// ─── Duration presets ─────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-interface DurationPreset {
-  hours: number;
-  label: string;   // "1.5h（90分）"
-}
-
-const DURATION_PRESETS: DurationPreset[] = [
-  { hours: 0.25, label: '0.25h（15分）' },
-  { hours: 0.5,  label: '0.5h（30分）'  },
-  { hours: 0.75, label: '0.75h（45分）' },
-  { hours: 1,    label: '1h（60分）'    },
-  { hours: 1.5,  label: '1.5h（90分）'  },
-  { hours: 2,    label: '2h（120分）'   },
-  { hours: 2.5,  label: '2.5h（150分）' },
-  { hours: 3,    label: '3h（180分）'   },
-  { hours: 4,    label: '4h（240分）'   },
-  { hours: 5,    label: '5h（300分）'   },
-];
-
-const CUSTOM_VALUE = '__custom__';
-
-/** hours が presets に含まれるか判定 */
-function isPreset(hours: number): boolean {
-  return DURATION_PRESETS.some((p) => p.hours === hours);
-}
+const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => i); // 0〜12
+const MIN_OPTIONS  = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,71 +26,87 @@ function fmtDate(dateStr: string): string {
   return d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
 }
 
-function fmtHours(minutes: number): string {
-  const h = minutes / 60;
-  return h % 1 === 0 ? `${h}h` : `${h.toFixed(2).replace(/\.?0+$/, '')}h`;
+/** totalMinutes → "1h 20m" 形式 */
+function fmtDuration(totalMinutes: number): string {
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }
 
-/** hours → "Xh（Y分）" */
-function hLabel(hours: number): string {
-  const mins = Math.round(hours * 60);
-  const hStr = hours % 1 === 0 ? `${hours}h` : `${hours}h`;
-  return `${hStr}（${mins}分）`;
+/** 分から (時, 分) へ変換。分は 5 分刻みにスナップ */
+function minsToHM(totalMinutes: number): { h: number; m: number } {
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.min(55, Math.round((totalMinutes % 60) / 5) * 5);
+  return { h, m };
 }
 
-// ─── Duration input (dropdown + direct) ──────────────────────────────────────
+// ─── Duration picker ──────────────────────────────────────────────────────────
 
-interface DurationInputProps {
-  hours: number;
-  onChange: (v: number) => void;
+interface DurationPickerProps {
+  h: number;
+  m: number;
+  onHChange: (v: number) => void;
+  onMChange: (v: number) => void;
 }
 
-function DurationInput({ hours, onChange }: DurationInputProps) {
-  const selectVal = isPreset(hours) ? String(hours) : CUSTOM_VALUE;
-  const mins = Math.round(hours * 60);
+function DurationPicker({ h, m, onHChange, onMChange }: DurationPickerProps) {
+  const totalMins = h * 60 + m;
 
-  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (e.target.value !== CUSTOM_VALUE) {
-      onChange(Number(e.target.value));
-    }
-    // カスタム選択時はテキスト入力欄で直接変更してもらう
-  };
-
-  const handleDirectInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = parseFloat(e.target.value);
-    if (!isNaN(v) && v > 0) onChange(v);
-  };
+  const selectCls =
+    'rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ' +
+    'px-3 py-2 text-base font-medium text-gray-900 dark:text-gray-100 ' +
+    'focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer ' +
+    'appearance-none text-center min-w-[72px]';
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <span className="text-xs text-gray-500 dark:text-gray-400">学習時間</span>
 
-      {/* Dropdown */}
-      <select
-        value={selectVal}
-        onChange={handleSelect}
-        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-      >
-        {DURATION_PRESETS.map((p) => (
-          <option key={p.hours} value={String(p.hours)}>{p.label}</option>
-        ))}
-        {!isPreset(hours) && (
-          <option value={CUSTOM_VALUE}>{hLabel(hours)}（カスタム）</option>
-        )}
-        <option value={CUSTOM_VALUE}>その他（直接入力）</option>
-      </select>
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Hours */}
+        <div className="flex items-center gap-1">
+          <select
+            value={h}
+            onChange={(e) => onHChange(Number(e.target.value))}
+            className={selectCls}
+            aria-label="時間"
+          >
+            {HOUR_OPTIONS.map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">h</span>
+        </div>
 
-      {/* Direct number input — always visible */}
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min={0.25} step={0.25} max={24}
-          value={hours}
-          onChange={handleDirectInput}
-          className="w-24 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 tabular-nums"
-        />
-        <span className="text-xs text-gray-400 dark:text-gray-500">h（{mins}分）</span>
+        {/* Minutes */}
+        <div className="flex items-center gap-1">
+          <select
+            value={m}
+            onChange={(e) => onMChange(Number(e.target.value))}
+            className={selectCls}
+            aria-label="分"
+          >
+            {MIN_OPTIONS.map((n) => (
+              <option key={n} value={n}>{String(n).padStart(2, '0')}</option>
+            ))}
+          </select>
+          <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">m</span>
+        </div>
+
+        {/* Live total */}
+        {totalMins > 0 && (
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            合計 {totalMins} 分
+          </span>
+        )}
       </div>
+
+      {/* Validation hint */}
+      {totalMins === 0 && (
+        <p className="text-xs text-red-400">1 分以上を入力してください</p>
+      )}
     </div>
   );
 }
@@ -122,44 +116,42 @@ function DurationInput({ hours, onChange }: DurationInputProps) {
 interface SessionFormProps {
   isEdit: boolean;
   date: string;
-  hours: number;
+  h: number;
+  m: number;
   memo: string;
   onDateChange: (v: string) => void;
-  onHoursChange: (v: number) => void;
+  onHChange: (v: number) => void;
+  onMChange: (v: number) => void;
   onMemoChange: (v: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
 
 function SessionForm({
-  isEdit, date, hours, memo,
-  onDateChange, onHoursChange, onMemoChange,
+  isEdit, date, h, m, memo,
+  onDateChange, onHChange, onMChange, onMemoChange,
   onSubmit, onCancel,
 }: SessionFormProps) {
-  const max = todayStr();
-
   return (
     <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white/80 dark:bg-gray-900/60 p-3 space-y-3">
       <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
         {isEdit ? '記録を編集' : '学習を記録'}
       </span>
 
-      <div className="grid grid-cols-2 gap-3">
-        {/* Date */}
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">日付</span>
-          <input
-            type="date"
-            value={date}
-            max={max}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </label>
+      {/* Date */}
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-gray-500 dark:text-gray-400">日付</span>
+        <input
+          type="date"
+          value={date}
+          max={todayStr()}
+          onChange={(e) => onDateChange(e.target.value)}
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </label>
 
-        {/* Duration */}
-        <DurationInput hours={hours} onChange={onHoursChange} />
-      </div>
+      {/* Duration picker */}
+      <DurationPicker h={h} m={m} onHChange={onHChange} onMChange={onMChange} />
 
       {/* Memo */}
       <label className="flex flex-col gap-1">
@@ -175,7 +167,11 @@ function SessionForm({
 
       <div className="flex gap-2 justify-end">
         <Button size="sm" variant="ghost" onClick={onCancel}>キャンセル</Button>
-        <Button size="sm" onClick={onSubmit}>
+        <Button
+          size="sm"
+          onClick={onSubmit}
+          disabled={h * 60 + m === 0}
+        >
           {isEdit ? '保存' : '記録する'}
         </Button>
       </div>
@@ -200,10 +196,7 @@ function SessionItem({ session, onEdit, onDelete }: SessionItemProps) {
             {fmtDate(session.date)}
           </span>
           <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 shrink-0">
-            {fmtHours(session.actualDurationMinutes)}
-          </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-            （{session.actualDurationMinutes}分）
+            {fmtDuration(session.actualDurationMinutes)}
           </span>
         </div>
         {session.memo && (
@@ -239,19 +232,20 @@ interface TopicSessionLogProps {
 export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessionLogProps) {
   const { data, updateData } = useStorageContext();
 
-  // Sessions for this topic only, newest-first
   const sessions = data.sessions
     .filter((s) => s.topicId === topicId && s.status === 'completed')
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
-  const totalHours = sessions.reduce((sum, s) => sum + s.actualDurationMinutes / 60, 0);
+  const totalMins  = sessions.reduce((sum, s) => sum + s.actualDurationMinutes, 0);
+  const totalHours = totalMins / 60;
 
   // Form state
-  const [showForm, setShowForm]     = useState(false);
-  const [editingId, setEditingId]   = useState<string | null>(null);
-  const [formDate, setFormDate]     = useState(todayStr);
-  const [formHours, setFormHours]   = useState(1);
-  const [formMemo, setFormMemo]     = useState('');
+  const [showForm, setShowForm]   = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formDate, setFormDate]   = useState(todayStr);
+  const [formH, setFormH]         = useState(1);
+  const [formM, setFormM]         = useState(0);
+  const [formMemo, setFormMemo]   = useState('');
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -259,7 +253,8 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
     setShowForm(false);
     setEditingId(null);
     setFormDate(todayStr());
-    setFormHours(1);
+    setFormH(1);
+    setFormM(0);
     setFormMemo('');
   };
 
@@ -272,8 +267,8 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
 
   // ── Add ────────────────────────────────────────────────────────────────────
   const handleAdd = () => {
-    if (!formDate || formHours <= 0) return;
-    const minutes = Math.round(formHours * 60);
+    const minutes = formH * 60 + formM;
+    if (!formDate || minutes <= 0) return;
     const newSession: StudySession = {
       id: crypto.randomUUID(),
       subjectId,
@@ -282,7 +277,7 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
       plannedDurationMinutes: minutes,
       actualDurationMinutes: minutes,
       status: 'completed',
-      difficulty: 3,   // 内部デフォルト（UIでは非表示）
+      difficulty: 3,
       memo: formMemo.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -292,16 +287,19 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
 
   // ── Edit ───────────────────────────────────────────────────────────────────
   const startEdit = (session: StudySession) => {
+    const { h, m } = minsToHM(session.actualDurationMinutes);
     setEditingId(session.id);
     setFormDate(session.date);
-    setFormHours(session.actualDurationMinutes / 60);
+    setFormH(h);
+    setFormM(m);
     setFormMemo(session.memo);
     setShowForm(true);
   };
 
   const handleSaveEdit = () => {
     if (!editingId) return;
-    const minutes = Math.round(formHours * 60);
+    const minutes = formH * 60 + formM;
+    if (minutes <= 0) return;
     commitSessions(
       updateSession(data.sessions, editingId, {
         date: formDate,
@@ -322,7 +320,7 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
 
   return (
     <div className="space-y-3">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">学習記録</span>
@@ -336,7 +334,7 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
                 ? 'text-emerald-700 dark:text-emerald-400'
                 : 'text-gray-500 dark:text-gray-400',
             )}>
-              {totalHours.toFixed(1)}h
+              {fmtDuration(totalMins)}
             </span>
             {' '}／ 予定 {plannedHours}h
           </span>
@@ -348,8 +346,8 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
                 : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
             )}>
               {totalHours > plannedHours
-                ? `+${(totalHours - plannedHours).toFixed(1)}h オーバー`
-                : `残り ${(plannedHours - totalHours).toFixed(1)}h`}
+                ? `+${fmtDuration(Math.round((totalHours - plannedHours) * 60))} オーバー`
+                : `残り ${fmtDuration(Math.round((plannedHours - totalHours) * 60))}`}
             </span>
           )}
         </div>
@@ -364,22 +362,24 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
         )}
       </div>
 
-      {/* Add / Edit form */}
+      {/* Form */}
       {showForm && (
         <SessionForm
           isEdit={editingId !== null}
           date={formDate}
-          hours={formHours}
+          h={formH}
+          m={formM}
           memo={formMemo}
           onDateChange={setFormDate}
-          onHoursChange={setFormHours}
+          onHChange={setFormH}
+          onMChange={setFormM}
           onMemoChange={setFormMemo}
           onSubmit={editingId ? handleSaveEdit : handleAdd}
           onCancel={resetForm}
         />
       )}
 
-      {/* Session history */}
+      {/* History */}
       {sessions.length > 0 ? (
         <div className="space-y-1.5">
           {sessions.map((session) => (
