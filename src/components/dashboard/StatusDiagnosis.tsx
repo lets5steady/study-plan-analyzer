@@ -198,14 +198,20 @@ interface StatusDiagnosisProps {
   spi: number;
   cpi: number;
   isRescheduledToday: boolean;
+  lastRescheduleMode?: 'deadline_first' | 'pace_first' | null;
   noSubjects?: boolean;
   noAC?: boolean;
   onNavigate?: (tab: 'tasks' | 'analytics') => void;
   onReschedule?: () => void;
 }
 
+const RESCHEDULE_RESULT_MESSAGES: Record<'deadline_first' | 'pace_first', string> = {
+  deadline_first: '遅れによる予測のズレを解消し、新しい計画値に修正しました。',
+  pace_first: '目標日が更新され、今日から新しいペースで計測が始まります。',
+};
+
 export function StatusDiagnosis({
-  spi, cpi, isRescheduledToday, noSubjects, noAC, onNavigate, onReschedule,
+  spi, cpi, isRescheduledToday, lastRescheduleMode, noSubjects, noAC, onNavigate, onReschedule,
 }: StatusDiagnosisProps) {
   const d = getStatusDiagnosis(spi, cpi, isRescheduledToday, noSubjects, noAC);
 
@@ -248,6 +254,13 @@ export function StatusDiagnosis({
       <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
         {d.trend}
       </p>
+
+      {/* リスケ完了メッセージ */}
+      {d.key === 'restart' && lastRescheduleMode && (
+        <p className="text-xs text-blue-600 dark:text-blue-400 mb-4">
+          {RESCHEDULE_RESULT_MESSAGES[lastRescheduleMode]}
+        </p>
+      )}
 
       {/* Action button */}
       {d.actionType !== 'none' && (

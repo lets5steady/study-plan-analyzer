@@ -53,17 +53,14 @@ export function RescheduleAlert() {
       <div className="grid sm:grid-cols-2 gap-3">
         {/* 期限厳守モード */}
         <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🎯</span>
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              期限厳守モード
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            期限厳守モード
+          </span>
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed flex-1">
             当初の目標日はそのまま。今日以降の残り日数に遅れ分を均等に上乗せし、スケジュールを引き直します。
           </p>
           <p className="text-[11px] text-amber-600 dark:text-amber-500 italic">
-            「遅れによる予測のズレを解消し、新しい『計画値』に修正しました。」
+            気合で追いつきたい方向け
           </p>
           <button
             onClick={rescheduleDeadlineFirst}
@@ -75,17 +72,14 @@ export function RescheduleAlert() {
 
         {/* ペース優先モード */}
         <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🔄</span>
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              ペース優先モード
-            </span>
-          </div>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            ペース優先モード
+          </span>
           <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed flex-1">
             現在の完了予測日を新しい目標日として上書きし、SPI を 1.0 にリセットします。無理のない計画で再スタートできます。
           </p>
           <p className="text-[11px] text-blue-500 dark:text-blue-400 italic">
-            目標日が更新され、今日から新しいペースで計測が始まります。
+            無理なく確実に進めたい方向け
           </p>
           <button
             onClick={reschedulePaceFirst}
