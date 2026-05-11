@@ -196,34 +196,55 @@ export interface ExamRisk {
   daysAtRisk: number; // positive = will finish AFTER exam
 }
 
-// ─── Today's task plan ───────────────────────────────────────────────────────
+// ─── Today's task budget ─────────────────────────────────────────────────────
+
+/** Per-project summary of today's proportional task allocation. */
+export interface ProjectDayBudget {
+  subjectId: string;
+  subjectName: string;
+  /** Total remaining hours (all incomplete topics) for this project. */
+  remainingHours: number;
+  /** Proportional share of today's budget allocated to this project. */
+  allocatedHoursToday: number;
+  /** Number of incomplete topics that fit within allocatedHoursToday. */
+  taskCount: number;
+}
 
 /**
- * A single topic to study today, with its allocated hours for the day.
+ * Today's task count and per-project breakdown, computed by proportional
+ * allocation: each project receives a share of today's budget proportional
+ * to its remaining work.
  */
-export interface TodayTask {
+export interface TodayTaskBudget {
+  date: string;
+  /** Hours available today per WeeklyWorkPattern. */
+  budgetHours: number;
+  /** Per-project allocation breakdown. */
+  projects: ProjectDayBudget[];
+  /** Total topic count across all projects (what to display). */
+  totalTaskCount: number;
+  /** Σ allocatedHoursToday across all projects. */
+  totalAllocatedHours: number;
+}
+
+// ─── Legacy plan types (kept for internal scheduler use) ─────────────────────
+
+/** @internal */
+interface TodayTask {
   subjectId: string;
   subjectName: string;
   topicId: string;
   topicName: string;
-  /** Hours allocated for this topic today (≤ today's budget). */
   allocatedHours: number;
-  /** Total remaining hours for this topic across all future days. */
   remainingHours: number;
 }
 
-/**
- * The set of topics to work on today, constrained to today's time budget.
- */
-export interface TodayTaskPlan {
+/** @internal */
+interface TodayTaskPlan {
   date: string;
-  /** Hours available today per WeeklyWorkPattern. */
   budgetHours: number;
-  /** Topics to study today, in priority order. */
   tasks: TodayTask[];
-  /** Number of distinct topics. */
   taskCount: number;
-  /** Sum of allocatedHours across all tasks (≤ budgetHours). */
   totalAllocatedHours: number;
 }
 
@@ -324,6 +345,87 @@ export function computeTodayTaskPlan(
     taskCount: tasks.length,
     totalAllocatedHours,
   };
+}
+
+/**
+ * Compute today's task count using proportional allocation across projects.
+ *
+ * Algorithm:
+ *   1. For each active project: remainingHours = Σ(plannedHours − EV) of incomplete topics.
+ *   2. Each project receives a proportional share of today's budget:
+ *        projectShare = (remainingHours / totalRemaining) × budgetHours
+ *      capped at the project's own remaining hours.
+ *   3. Walk incomplete topics in order; count topics that receive any allocation
+ *      within the project's share.
+ *
+ * Only the count (taskCount) is displayed — specific topic names are not exposed.
+ */
+export function computeTodayTaskBudget(
+  subjects: Subject[],
+  pattern: WeeklyWorkPattern,
+  today: Date,
+): TodayTaskBudget {
+  const todayStr = toDateStr(today);
+  const budgetHours = hoursForDate(today, pattern);
+
+  if (budgetHours === 0) {
+    return { date: todayStr, budgetHours: 0, projects: [], totalTaskCount: 0, totalAllocatedHours: 0 };
+  }
+
+  // Step 1: per-project remaining hours (incomplete & schedulable subjects only)
+  const projectData = subjects
+    .filter((s) => s.status !== 'completed' && s.plannedStartDate <= todayStr)
+    .map((s) => {
+      const remainingHours = s.topics
+        .filter((t) => t.status !== 'completed')
+        .reduce((sum, t) => sum + Math.max(0, t.plannedHours - computeTopicEV(t)), 0);
+      return { subject: s, remainingHours };
+    })
+    .filter((p) => p.remainingHours > 0.001);
+
+  const totalRemaining = projectData.reduce((s, p) => s + p.remainingHours, 0);
+
+  if (totalRemaining === 0) {
+    return { date: todayStr, budgetHours, projects: [], totalTaskCount: 0, totalAllocatedHours: 0 };
+  }
+
+  // Step 2 & 3: proportional share → count topics that fit
+  const projects: ProjectDayBudget[] = [];
+
+  for (const { subject, remainingHours } of projectData) {
+    const share = Math.min(remainingHours, (remainingHours / totalRemaining) * budgetHours);
+    const allocatedHoursToday = Math.round(share * 1000) / 1000;
+
+    let taskCount = 0;
+    let hoursLeft = share;
+
+    for (const topic of [...subject.topics]
+      .filter((t) => t.status !== 'completed')
+      .sort((a, b) => a.order - b.order)) {
+      if (hoursLeft <= 0.001) break;
+      const topicRemaining = Math.max(0, topic.plannedHours - computeTopicEV(topic));
+      if (topicRemaining < 0.001) continue;
+
+      taskCount++;
+      hoursLeft -= Math.min(hoursLeft, topicRemaining);
+    }
+
+    if (taskCount > 0) {
+      projects.push({
+        subjectId: subject.id,
+        subjectName: subject.name,
+        remainingHours: Math.round(remainingHours * 1000) / 1000,
+        allocatedHoursToday,
+        taskCount,
+      });
+    }
+  }
+
+  const totalTaskCount = projects.reduce((s, p) => s + p.taskCount, 0);
+  const totalAllocatedHours =
+    Math.round(projects.reduce((s, p) => s + p.allocatedHoursToday, 0) * 1000) / 1000;
+
+  return { date: todayStr, budgetHours, projects, totalTaskCount, totalAllocatedHours };
 }
 
 /**
