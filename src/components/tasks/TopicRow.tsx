@@ -9,6 +9,7 @@ import {
 import {
   VOLUME_OPTIONS, calcVolumeHours, formatVolumeTime, type VolumeId,
 } from '../../utils/learningModes';
+import { TopicSessionLog } from './TopicSessionLog';
 import type { Topic, SubjectStatus } from '../../types';
 
 // ─── Task type ────────────────────────────────────────────────────────────────
@@ -452,33 +453,9 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
             </div>
           )}
 
-          {/* Actual hours + notes */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">実際に使った時間 (h)</span>
-              <input
-                type="number"
-                min={0} step={0.5}
-                value={topic.actualHours}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v >= 0) mutate({ actualHours: v });
-                }}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </label>
-            <div className="flex flex-col justify-end">
-              <span className="text-sm text-gray-400">予定 {topic.plannedHours}h</span>
-              <span className="text-sm text-gray-400">
-                {topic.actualHours > topic.plannedHours
-                  ? `予定より ${(topic.actualHours - topic.plannedHours).toFixed(1)}h 多くかかっています`
-                  : `あと ${(topic.plannedHours - topic.actualHours).toFixed(1)}h 余裕あり`}
-              </span>
-            </div>
-          </div>
-
+          {/* Topic memo */}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">メモ</span>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">トピックメモ</span>
             <textarea
               rows={2}
               value={topic.notes}
@@ -487,6 +464,15 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
               className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </label>
+
+          {/* Session-based study log */}
+          <div className="rounded-lg bg-white/70 dark:bg-gray-900/60 border border-emerald-100 dark:border-emerald-900/50 px-4 py-3">
+            <TopicSessionLog
+              topicId={topic.id}
+              subjectId={subjectId}
+              plannedHours={topic.plannedHours}
+            />
+          </div>
 
         </div>
       )}
