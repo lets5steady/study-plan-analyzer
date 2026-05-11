@@ -513,8 +513,8 @@ function TaskItem({
   const { completed } = subtask;
 
   return (
-    <div className={cn('flex items-center gap-2 group', s.row)}>
-      <div onClick={(e) => e.stopPropagation()}>
+    <div className={cn('flex items-start gap-2 group', s.row)}>
+      <div className="mt-[2px]" onClick={(e) => e.stopPropagation()}>
         <Switch size="sm" checked={completed} onChange={onToggle} />
       </div>
 
@@ -536,12 +536,12 @@ function TaskItem({
         </div>
       ) : (
         <div
-          className="flex items-center gap-1.5 flex-1 min-w-0 cursor-pointer select-none"
+          className="flex items-start gap-1.5 flex-1 min-w-0 cursor-pointer select-none"
           onClick={onToggle}
           onDoubleClick={(e) => { e.stopPropagation(); onEditStart(); }}
           title="ダブルクリックで編集"
         >
-          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', completed ? 'opacity-30' : '', s.dot)} />
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0 mt-[7px]', completed ? 'opacity-30' : '', s.dot)} />
           <span className={cn(s.text, completed && 'line-through opacity-40')}>
             {subtask.name}
           </span>
