@@ -164,10 +164,14 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
   const completedSubs = topic.subtasks.filter((s) => s.completed).length;
   const totalSubs     = topic.subtasks.length;
 
-  const evEstimate =
-    totalSubs > 0
-      ? topic.plannedHours * (completedSubs / totalSubs)
-      : topic.plannedHours * (topic.completionPercent / 100);
+  // ヘッダーバー用: セッション実績時間（AC）をセッション一覧から直接計算
+  const sessionMins = data.sessions
+    .filter((s) => s.topicId === topic.id && s.status === 'completed')
+    .reduce((sum, s) => sum + s.actualDurationMinutes, 0);
+  const sessionHours = sessionMins / 60;
+  const acProgress   = topic.plannedHours > 0
+    ? Math.min(100, (sessionHours / topic.plannedHours) * 100)
+    : 0;
 
   const mainTasks = topic.subtasks.filter((s) => (s.type ?? 'main') === 'main');
   const subTasks  = topic.subtasks.filter((s) => s.type === 'sub');
@@ -211,11 +215,17 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
           <span className={cn('text-sm text-gray-400 transition-transform shrink-0', expanded ? 'rotate-180' : '')}>▼</span>
         </div>
 
-        {/* 下段: プログレスバー + 達成/予定時間 + 編集・削除ボタン */}
+        {/* 下段: 実績時間バー + 実績/予定時間 + 編集・削除ボタン */}
         <div className="flex items-center gap-2 mt-2 pl-[18px]">
-          <ProgressBar value={topic.completionPercent} className="flex-1 max-w-[100px] sm:max-w-xs" />
-          <span className="text-xs text-gray-400 hidden sm:inline ml-1" title="達成した学習量 (Earned Value)">
-            達成 {evEstimate.toFixed(1)}h ／予定 {topic.plannedHours}h
+          <ProgressBar
+            value={acProgress}
+            className="flex-1 max-w-[100px] sm:max-w-xs"
+            color={acProgress > 100 ? 'bg-amber-400' : 'bg-blue-400'}
+          />
+          <span className="text-xs text-gray-400 hidden sm:inline ml-1" title="学習記録に基づく実績時間">
+            {sessionHours > 0
+              ? `実績 ${sessionHours.toFixed(1)}h ／予定 ${topic.plannedHours}h`
+              : `予定 ${topic.plannedHours}h`}
           </span>
           <div className="flex items-center gap-0.5 ml-auto shrink-0">
             {/* 編集ボタン */}
