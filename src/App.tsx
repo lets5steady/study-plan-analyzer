@@ -24,7 +24,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [addOpen, setAddOpen] = useState(false);
   const { data, setData, resetData, exportJSON, importJSON } = useStorageContext();
-  const { regenerateSchedule, rescheduleFromToday } = useEVM();
+  const { regenerateSchedule } = useEVM();
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,10 +59,7 @@ function AppContent() {
                 </Button>
               )}
             </div>
-            <MetricsPanel
-              onNavigate={setActiveTab}
-              onReschedule={rescheduleFromToday}
-            />
+            <MetricsPanel onNavigate={setActiveTab} />
 
             {/* Import / Export */}
             <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4 flex items-center justify-between gap-3">

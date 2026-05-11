@@ -5,6 +5,7 @@ import { Badge, Modal, spiVariant, ProgressBar } from '../ui';
 import { cn } from '../../utils/cn';
 import { RescheduleAlert } from './RescheduleAlert';
 import { StatusDiagnosis } from './StatusDiagnosis';
+import type { RescheduleMode } from '../../types';
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
 
@@ -177,6 +178,70 @@ function EVMGlossary() {
   );
 }
 
+// ─── Reschedule mode modal ────────────────────────────────────────────────────
+
+interface RescheduleModeModalProps {
+  open: boolean;
+  onClose: () => void;
+  onDeadlineFirst: () => void;
+  onPaceFirst: () => void;
+}
+
+function RescheduleModeModal({ open, onClose, onDeadlineFirst, onPaceFirst }: RescheduleModeModalProps) {
+  const handleSelect = (fn: () => void) => { fn(); onClose(); };
+
+  return (
+    <Modal open={open} onClose={onClose} title="スケジュールの組み直し方法を選択">
+      <div className="space-y-3">
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+          現在の状況に合わせて、スケジュールの調整方法を選んでください。
+        </p>
+        <div className="grid gap-3">
+          {/* 期限厳守 */}
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🎯</span>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">期限厳守モード</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              当初の目標日はそのまま。今日以降の残り日数に遅れ分を均等に上乗せし、スケジュールを引き直します。
+            </p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-500 italic">
+              「遅れによる予測のズレを解消し、新しい『計画値』に修正しました。」
+            </p>
+            <button
+              onClick={() => handleSelect(onDeadlineFirst)}
+              className="mt-1 w-full px-3 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+            >
+              このモードで組み直す
+            </button>
+          </div>
+
+          {/* ペース優先 */}
+          <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 p-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🔄</span>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">ペース優先モード</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              現在の完了予測日を新しい目標日として上書きし、SPI を 1.0 にリセットします。無理のない計画で再スタートできます。
+            </p>
+            <p className="text-[11px] text-blue-500 dark:text-blue-400 italic">
+              目標日が更新され、今日から新しいペースで計測が始まります。
+            </p>
+            <button
+              onClick={() => handleSelect(onPaceFirst)}
+              className="mt-1 w-full px-3 py-2 rounded-lg text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+            >
+              このモードで組み直す
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Main MetricsPanel ────────────────────────────────────────────────────────
 
 interface MetricsPanelProps {
@@ -186,17 +251,19 @@ interface MetricsPanelProps {
 
 type DetailModalType = 'spi' | 'cpi' | 'forecast' | 'achievement' | null;
 
-export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
+export function MetricsPanel({ onNavigate }: MetricsPanelProps) {
   const { data } = useStorageContext();
-  const { totalMetrics, hasScheduleRisk, hasTimeRisk, examRisks } = useEVM();
+  const { totalMetrics, hasScheduleRisk, hasTimeRisk, examRisks, rescheduleDeadlineFirst, reschedulePaceFirst } = useEVM();
   const [showTech, setShowTech] = useState(false);
   const [detailModal, setDetailModal] = useState<DetailModalType>(null);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
 
   const m = totalMetrics;
   const hasData = data.subjects.length > 0;
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const rescheduledToday = data.settings.lastRescheduledAt === todayStr;
+  const lastMode = data.settings.lastRescheduleMode as RescheduleMode | null | undefined;
 
   const forecastStr = m.forecastCompletionDate
     ? new Date(m.forecastCompletionDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
@@ -425,7 +492,7 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         noSubjects={!hasData}
         noAC={noAC}
         onNavigate={onNavigate}
-        onReschedule={onReschedule}
+        onReschedule={() => setRescheduleModalOpen(true)}
       />
 
       {/* 時間サマリ row */}
@@ -478,17 +545,45 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
 
       {/* Reschedule alert / rescheduled-today badge */}
       {rescheduledToday ? (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 text-sm font-semibold shrink-0">
-            リスケジュール済み
-          </span>
-          <span className="text-sm text-blue-600 dark:text-blue-400">
-            本日スケジュールを見直しました。新しい計画に基づいて学習を進めましょう。
-          </span>
+        <div className={cn(
+          'flex items-start gap-3 px-4 py-3 rounded-xl border',
+          lastMode === 'pace_first'
+            ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800',
+        )}>
+          <span className="text-lg shrink-0 mt-0.5">{lastMode === 'pace_first' ? '🔄' : '🎯'}</span>
+          <div className="flex-1 space-y-0.5">
+            <span className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-sm font-semibold',
+              lastMode === 'pace_first'
+                ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                : 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300',
+            )}>
+              {lastMode === 'pace_first' ? 'ペース優先モード' : '期限厳守モード'}で組み直しました
+            </span>
+            <p className={cn(
+              'text-sm',
+              lastMode === 'pace_first'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-amber-700 dark:text-amber-400',
+            )}>
+              {lastMode === 'pace_first'
+                ? '完了予測日を新しい目標日として更新しました。今日から新しいペースで計測が始まります。'
+                : '遅れによる予測のズレを解消し、新しい『計画値』に修正しました。引き続き目標日を目指して学習しましょう。'}
+            </p>
+          </div>
         </div>
       ) : (hasScheduleRisk || hasTimeRisk || examRisks.length > 0) ? (
         <RescheduleAlert />
       ) : null}
+
+      {/* Reschedule mode modal (triggered from StatusDiagnosis burnout action) */}
+      <RescheduleModeModal
+        open={rescheduleModalOpen}
+        onClose={() => setRescheduleModalOpen(false)}
+        onDeadlineFirst={rescheduleDeadlineFirst}
+        onPaceFirst={reschedulePaceFirst}
+      />
 
       {/* Subject overview */}
       {data.subjects.length > 0 && (

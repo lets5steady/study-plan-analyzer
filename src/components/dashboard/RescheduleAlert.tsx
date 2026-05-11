@@ -1,13 +1,19 @@
 import { useEVM } from '../../hooks/useEVM';
-import { Button } from '../ui';
 
 export function RescheduleAlert() {
-  const { totalMetrics, examRisks, hasScheduleRisk, rescheduleFromToday } = useEVM();
+  const {
+    totalMetrics,
+    examRisks,
+    hasScheduleRisk,
+    rescheduleDeadlineFirst,
+    reschedulePaceFirst,
+  } = useEVM();
   const { spi, cpi } = totalMetrics;
 
   return (
     <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 animate-amber-pulse">
-      <div className="flex items-start gap-3">
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-4">
         <span className="text-amber-500 text-xl shrink-0 mt-0.5">⚠</span>
         <div className="flex-1 space-y-1">
           <p className="font-semibold text-amber-800 dark:text-amber-300">
@@ -38,18 +44,56 @@ export function RescheduleAlert() {
           )}
 
           <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
-            「スケジュールを組み直す」を押すと、今日から残りのタスクを再配分します。
+            スケジュールの組み直し方法を選んでください。
           </p>
         </div>
+      </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={rescheduleFromToday}
-          className="shrink-0 bg-amber-500 hover:bg-amber-600 whitespace-nowrap"
-        >
-          スケジュールを組み直す
-        </Button>
+      {/* Mode selection cards */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        {/* 期限厳守モード */}
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🎯</span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              期限厳守モード
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed flex-1">
+            当初の目標日はそのまま。今日以降の残り日数に遅れ分を均等に上乗せし、スケジュールを引き直します。
+          </p>
+          <p className="text-[11px] text-amber-600 dark:text-amber-500 italic">
+            「遅れによる予測のズレを解消し、新しい『計画値』に修正しました。」
+          </p>
+          <button
+            onClick={rescheduleDeadlineFirst}
+            className="mt-auto w-full px-3 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+          >
+            このモードで組み直す
+          </button>
+        </div>
+
+        {/* ペース優先モード */}
+        <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 p-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🔄</span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              ペース優先モード
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed flex-1">
+            現在の完了予測日を新しい目標日として上書きし、SPI を 1.0 にリセットします。無理のない計画で再スタートできます。
+          </p>
+          <p className="text-[11px] text-blue-500 dark:text-blue-400 italic">
+            目標日が更新され、今日から新しいペースで計測が始まります。
+          </p>
+          <button
+            onClick={reschedulePaceFirst}
+            className="mt-auto w-full px-3 py-2 rounded-lg text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors"
+          >
+            このモードで組み直す
+          </button>
+        </div>
       </div>
     </div>
   );
