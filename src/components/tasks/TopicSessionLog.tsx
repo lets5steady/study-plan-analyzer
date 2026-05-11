@@ -8,7 +8,34 @@ import {
   deleteSession,
   syncTopicActualHours,
 } from '../../utils/mutations';
-import type { StudySession, Difficulty } from '../../types';
+import type { StudySession } from '../../types';
+
+// ─── Duration presets ─────────────────────────────────────────────────────────
+
+interface DurationPreset {
+  hours: number;
+  label: string;   // "1.5h（90分）"
+}
+
+const DURATION_PRESETS: DurationPreset[] = [
+  { hours: 0.25, label: '0.25h（15分）' },
+  { hours: 0.5,  label: '0.5h（30分）'  },
+  { hours: 0.75, label: '0.75h（45分）' },
+  { hours: 1,    label: '1h（60分）'    },
+  { hours: 1.5,  label: '1.5h（90分）'  },
+  { hours: 2,    label: '2h（120分）'   },
+  { hours: 2.5,  label: '2.5h（150分）' },
+  { hours: 3,    label: '3h（180分）'   },
+  { hours: 4,    label: '4h（240分）'   },
+  { hours: 5,    label: '5h（300分）'   },
+];
+
+const CUSTOM_VALUE = '__custom__';
+
+/** hours が presets に含まれるか判定 */
+function isPreset(hours: number): boolean {
+  return DURATION_PRESETS.some((p) => p.hours === hours);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,16 +50,72 @@ function fmtDate(dateStr: string): string {
 
 function fmtHours(minutes: number): string {
   const h = minutes / 60;
-  return h % 1 === 0 ? `${h}h` : `${h.toFixed(1)}h`;
+  return h % 1 === 0 ? `${h}h` : `${h.toFixed(2).replace(/\.?0+$/, '')}h`;
 }
 
-const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  1: 'とても簡単',
-  2: '簡単',
-  3: '普通',
-  4: '難しい',
-  5: 'とても難しい',
-};
+/** hours → "Xh（Y分）" */
+function hLabel(hours: number): string {
+  const mins = Math.round(hours * 60);
+  const hStr = hours % 1 === 0 ? `${hours}h` : `${hours}h`;
+  return `${hStr}（${mins}分）`;
+}
+
+// ─── Duration input (dropdown + direct) ──────────────────────────────────────
+
+interface DurationInputProps {
+  hours: number;
+  onChange: (v: number) => void;
+}
+
+function DurationInput({ hours, onChange }: DurationInputProps) {
+  const selectVal = isPreset(hours) ? String(hours) : CUSTOM_VALUE;
+  const mins = Math.round(hours * 60);
+
+  const handleSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value !== CUSTOM_VALUE) {
+      onChange(Number(e.target.value));
+    }
+    // カスタム選択時はテキスト入力欄で直接変更してもらう
+  };
+
+  const handleDirectInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = parseFloat(e.target.value);
+    if (!isNaN(v) && v > 0) onChange(v);
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-gray-500 dark:text-gray-400">学習時間</span>
+
+      {/* Dropdown */}
+      <select
+        value={selectVal}
+        onChange={handleSelect}
+        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      >
+        {DURATION_PRESETS.map((p) => (
+          <option key={p.hours} value={String(p.hours)}>{p.label}</option>
+        ))}
+        {!isPreset(hours) && (
+          <option value={CUSTOM_VALUE}>{hLabel(hours)}（カスタム）</option>
+        )}
+        <option value={CUSTOM_VALUE}>その他（直接入力）</option>
+      </select>
+
+      {/* Direct number input — always visible */}
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={0.25} step={0.25} max={24}
+          value={hours}
+          onChange={handleDirectInput}
+          className="w-24 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 tabular-nums"
+        />
+        <span className="text-xs text-gray-400 dark:text-gray-500">h（{mins}分）</span>
+      </div>
+    </div>
+  );
+}
 
 // ─── Session form ─────────────────────────────────────────────────────────────
 
@@ -41,18 +124,16 @@ interface SessionFormProps {
   date: string;
   hours: number;
   memo: string;
-  difficulty: Difficulty;
   onDateChange: (v: string) => void;
   onHoursChange: (v: number) => void;
   onMemoChange: (v: string) => void;
-  onDifficultyChange: (v: Difficulty) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
 
 function SessionForm({
-  isEdit, date, hours, memo, difficulty,
-  onDateChange, onHoursChange, onMemoChange, onDifficultyChange,
+  isEdit, date, hours, memo,
+  onDateChange, onHoursChange, onMemoChange,
   onSubmit, onCancel,
 }: SessionFormProps) {
   const max = todayStr();
@@ -63,7 +144,8 @@ function SessionForm({
         {isEdit ? '記録を編集' : '学習を記録'}
       </span>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Date */}
         <label className="flex flex-col gap-1">
           <span className="text-xs text-gray-500 dark:text-gray-400">日付</span>
           <input
@@ -71,47 +153,15 @@ function SessionForm({
             value={date}
             max={max}
             onChange={(e) => onDateChange(e.target.value)}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
+            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">学習時間 (h)</span>
-          <input
-            type="number"
-            min={0.25} step={0.25} max={24}
-            value={hours}
-            onChange={(e) => onHoursChange(Math.max(0.25, Number(e.target.value)))}
-            className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100"
-          />
-        </label>
+
+        {/* Duration */}
+        <DurationInput hours={hours} onChange={onHoursChange} />
       </div>
 
-      {/* Difficulty */}
-      <div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">難易度</span>
-        <div className="flex items-center gap-1 mt-1 flex-wrap">
-          {([1, 2, 3, 4, 5] as Difficulty[]).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => onDifficultyChange(d)}
-              className={cn(
-                'w-7 h-7 rounded text-sm font-medium transition-colors',
-                difficulty >= d
-                  ? 'bg-amber-400 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600',
-              )}
-              title={DIFFICULTY_LABELS[d]}
-            >
-              ★
-            </button>
-          ))}
-          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">
-            {DIFFICULTY_LABELS[difficulty]}
-          </span>
-        </div>
-      </div>
-
+      {/* Memo */}
       <label className="flex flex-col gap-1">
         <span className="text-xs text-gray-500 dark:text-gray-400">メモ（任意）</span>
         <input
@@ -119,7 +169,7 @@ function SessionForm({
           value={memo}
           onChange={(e) => onMemoChange(e.target.value)}
           placeholder="今日気づいたことなど…"
-          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+          className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-gray-400 dark:placeholder:text-gray-600"
         />
       </label>
 
@@ -152,12 +202,9 @@ function SessionItem({ session, onEdit, onDelete }: SessionItemProps) {
           <span className="text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 shrink-0">
             {fmtHours(session.actualDurationMinutes)}
           </span>
-          {session.difficulty && (
-            <span className="text-xs text-amber-400 shrink-0" title={DIFFICULTY_LABELS[session.difficulty]}>
-              {'★'.repeat(session.difficulty)}
-              <span className="text-gray-200 dark:text-gray-700">{'★'.repeat(5 - session.difficulty)}</span>
-            </span>
-          )}
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+            （{session.actualDurationMinutes}分）
+          </span>
         </div>
         {session.memo && (
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{session.memo}</p>
@@ -200,12 +247,11 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
   const totalHours = sessions.reduce((sum, s) => sum + s.actualDurationMinutes / 60, 0);
 
   // Form state
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formDate, setFormDate]           = useState(todayStr);
-  const [formHours, setFormHours]         = useState(1);
-  const [formMemo, setFormMemo]           = useState('');
-  const [formDifficulty, setFormDifficulty] = useState<Difficulty>(3);
+  const [showForm, setShowForm]     = useState(false);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [formDate, setFormDate]     = useState(todayStr);
+  const [formHours, setFormHours]   = useState(1);
+  const [formMemo, setFormMemo]     = useState('');
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -215,7 +261,6 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
     setFormDate(todayStr());
     setFormHours(1);
     setFormMemo('');
-    setFormDifficulty(3);
   };
 
   const commitSessions = (newSessions: StudySession[]) => {
@@ -237,7 +282,7 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
       plannedDurationMinutes: minutes,
       actualDurationMinutes: minutes,
       status: 'completed',
-      difficulty: formDifficulty,
+      difficulty: 3,   // 内部デフォルト（UIでは非表示）
       memo: formMemo.trim(),
       createdAt: new Date().toISOString(),
     };
@@ -251,21 +296,20 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
     setFormDate(session.date);
     setFormHours(session.actualDurationMinutes / 60);
     setFormMemo(session.memo);
-    setFormDifficulty(session.difficulty);
     setShowForm(true);
   };
 
   const handleSaveEdit = () => {
     if (!editingId) return;
     const minutes = Math.round(formHours * 60);
-    const newSessions = updateSession(data.sessions, editingId, {
-      date: formDate,
-      actualDurationMinutes: minutes,
-      plannedDurationMinutes: minutes,
-      memo: formMemo.trim(),
-      difficulty: formDifficulty,
-    });
-    commitSessions(newSessions);
+    commitSessions(
+      updateSession(data.sessions, editingId, {
+        date: formDate,
+        actualDurationMinutes: minutes,
+        plannedDurationMinutes: minutes,
+        memo: formMemo.trim(),
+      }),
+    );
     resetForm();
   };
 
@@ -280,7 +324,7 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
     <div className="space-y-3">
       {/* Header row */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">学習記録</span>
           <span className="text-sm text-gray-400 dark:text-gray-500 tabular-nums">
             累計{' '}
@@ -327,11 +371,9 @@ export function TopicSessionLog({ topicId, subjectId, plannedHours }: TopicSessi
           date={formDate}
           hours={formHours}
           memo={formMemo}
-          difficulty={formDifficulty}
           onDateChange={setFormDate}
           onHoursChange={setFormHours}
           onMemoChange={setFormMemo}
-          onDifficultyChange={setFormDifficulty}
           onSubmit={editingId ? handleSaveEdit : handleAdd}
           onCancel={resetForm}
         />
