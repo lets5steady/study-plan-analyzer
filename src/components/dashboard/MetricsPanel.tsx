@@ -417,16 +417,16 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         </Modal>
       )}
 
-      {/* ステータス診断 */}
-      {hasData && (
-        <StatusDiagnosis
-          spi={m.spi}
-          cpi={m.cpi}
-          isRescheduledToday={rescheduledToday}
-          onNavigate={onNavigate}
-          onReschedule={onReschedule}
-        />
-      )}
+      {/* ステータス診断 — 常に表示（未設定・未着手・通常状態を自動判別） */}
+      <StatusDiagnosis
+        spi={m.spi}
+        cpi={m.cpi}
+        isRescheduledToday={rescheduledToday}
+        noSubjects={!hasData}
+        noAC={noAC}
+        onNavigate={onNavigate}
+        onReschedule={onReschedule}
+      />
 
       {/* 時間サマリ row */}
       {hasData && (
@@ -502,15 +502,6 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         </div>
       )}
 
-      {/* Empty state */}
-      {data.subjects.length === 0 && (
-        <div className="text-center py-16 text-gray-400 dark:text-gray-600">
-          <svg className="w-14 h-14 mb-3 mx-auto text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-          <p className="text-sm">プロジェクトを追加すると学習の進み具合が表示されます</p>
-        </div>
-      )}
     </div>
   );
 }

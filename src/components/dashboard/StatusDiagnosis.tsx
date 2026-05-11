@@ -4,6 +4,8 @@ import { Badge } from '../ui';
 // ─── Diagnosis data ───────────────────────────────────────────────────────────
 
 type DiagnosisKey =
+  | 'no_project'
+  | 'not_started'
   | 'restart'
   | 'ideal'
   | 'overloaded'
@@ -25,6 +27,26 @@ interface DiagnosisEntry {
 }
 
 const DIAGNOSES: Record<DiagnosisKey, DiagnosisEntry> = {
+  no_project: {
+    key: 'no_project',
+    label: 'プロジェクトを追加しましょう',
+    badgeVariant: 'neutral',
+    cardColor: 'border-l-gray-300 dark:border-l-gray-600 bg-gray-50/60 dark:bg-gray-800/30',
+    labelColor: 'text-gray-600 dark:text-gray-300',
+    trend: 'まだプロジェクトが登録されていません。学習する科目・資格などをプロジェクトとして追加すると、進捗・効率・完了予測などの分析機能が使えるようになります。',
+    action: 'プロジェクトを追加する',
+    actionType: 'tasks',
+  },
+  not_started: {
+    key: 'not_started',
+    label: 'さあ、学習を始めましょう！',
+    badgeVariant: 'info',
+    cardColor: 'border-l-indigo-400 dark:border-l-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/20',
+    labelColor: 'text-indigo-700 dark:text-indigo-300',
+    trend: 'プロジェクトの設定が完了しています。学習セッションを記録すると、集中効率（CPI）や進捗スピード（SPI）などの分析が自動的に始まります。最初の一歩を踏み出しましょう！',
+    action: '学習セッションを記録する',
+    actionType: 'tasks',
+  },
   restart: {
     key: 'restart',
     label: 'リスタート・調整完了',
@@ -96,7 +118,11 @@ export function getStatusDiagnosis(
   spi: number,
   cpi: number,
   isRescheduledToday: boolean,
+  noSubjects?: boolean,
+  noAC?: boolean,
 ): DiagnosisEntry {
+  if (noSubjects) return DIAGNOSES.no_project;
+  if (noAC)       return DIAGNOSES.not_started;
   if (isRescheduledToday) return DIAGNOSES.restart;
 
   const spiHigh = spi > BUFFER_HIGH;
@@ -119,6 +145,18 @@ export function getStatusDiagnosis(
 function DiagnosisIcon({ diagKey, labelColor }: { diagKey: DiagnosisKey; labelColor: string }) {
   const cls = cn('w-5 h-5 shrink-0', labelColor);
   switch (diagKey) {
+    case 'no_project':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 10.5v6m3-3H9m4.06-7.19-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+        </svg>
+      );
+    case 'not_started':
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+        </svg>
+      );
     case 'restart':
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -160,14 +198,16 @@ interface StatusDiagnosisProps {
   spi: number;
   cpi: number;
   isRescheduledToday: boolean;
+  noSubjects?: boolean;
+  noAC?: boolean;
   onNavigate?: (tab: 'tasks' | 'analytics') => void;
   onReschedule?: () => void;
 }
 
 export function StatusDiagnosis({
-  spi, cpi, isRescheduledToday, onNavigate, onReschedule,
+  spi, cpi, isRescheduledToday, noSubjects, noAC, onNavigate, onReschedule,
 }: StatusDiagnosisProps) {
-  const d = getStatusDiagnosis(spi, cpi, isRescheduledToday);
+  const d = getStatusDiagnosis(spi, cpi, isRescheduledToday, noSubjects, noAC);
 
   const handleAction = () => {
     if (d.actionType === 'tasks')     onNavigate?.('tasks');
@@ -190,16 +230,18 @@ export function StatusDiagnosis({
         {d.key === 'restart' && (
           <Badge variant="info">計画見直し済み</Badge>
         )}
-        {/* SPI / CPI indicators */}
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          <span className="text-sm text-gray-400 dark:text-gray-500">
-            SPI <span className={cn('font-semibold tabular-nums', spi >= BUFFER_LOW ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>{spi.toFixed(2)}</span>
-          </span>
-          <span className="text-gray-200 dark:text-gray-700">/</span>
-          <span className="text-sm text-gray-400 dark:text-gray-500">
-            CPI <span className={cn('font-semibold tabular-nums', cpi >= BUFFER_LOW ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>{cpi.toFixed(2)}</span>
-          </span>
-        </div>
+        {/* SPI / CPI indicators — 未設定・未着手時は非表示 */}
+        {!noSubjects && !noAC && (
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <span className="text-sm text-gray-400 dark:text-gray-500">
+              SPI <span className={cn('font-semibold tabular-nums', spi >= BUFFER_LOW ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>{spi.toFixed(2)}</span>
+            </span>
+            <span className="text-gray-200 dark:text-gray-700">/</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">
+              CPI <span className={cn('font-semibold tabular-nums', cpi >= BUFFER_LOW ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>{cpi.toFixed(2)}</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Trend text */}
