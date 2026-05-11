@@ -207,9 +207,14 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
     : null;
 
   // ── Detail modal configs ──────────────────────────────────────────────────
+  // AC=0 = 学習セッション未記録（未着手状態）
+  const noAC = hasData && m.ac === 0;
+
   const spiColor = m.spi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
     : m.spi >= 0.9 ? 'text-amber-500' : 'text-red-500';
-  const cpiColor = m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
+  const cpiColor = noAC
+    ? 'text-gray-400 dark:text-gray-500'
+    : m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
     : m.cpi >= 0.9 ? 'text-amber-500' : 'text-red-500';
 
   // SPI の内訳表示用: リスケ後はデルタ値（増分EV/PV）を使う
@@ -237,14 +242,21 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
     },
     cpi: {
       title: '集中効率 (CPI) の内訳',
-      description: 'CPIは、実際に使った時間（AC）に対して、どれだけの成果（EV）を得られたかのコスパを表します。1.0以上なら予定より少ない時間で成果を出せている状態です。',
-      rows: [
-        { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
-        { label: '実際に使った時間 (AC)', value: `${m.ac.toFixed(2)} 時間`, sub: '記録したすべての学習セッションの合計' },
-        { label: 'コスト差異 (CV = EV − AC)', value: `${m.cv >= 0 ? '+' : ''}${m.cv.toFixed(2)} pt`, sub: m.cv >= 0 ? '予定より効率よく進んでいます' : '予定より時間がかかっています' },
-      ],
-      formula: `${m.ev.toFixed(2)} ÷ ${m.ac.toFixed(2)} = ${m.cpi.toFixed(2)}`,
-      formulaResult: m.cpi.toFixed(2),
+      description: noAC
+        ? 'まだ学習セッションが記録されていないため、CPI を算出できません。学習時間を記録すると自動的に計算されます。'
+        : 'CPIは、実際に使った時間（AC）に対して、どれだけの成果（EV）を得られたかのコスパを表します。1.0以上なら予定より少ない時間で成果を出せている状態です。',
+      rows: noAC
+        ? [
+            { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+            { label: '実際に使った時間 (AC)', value: '0.00 時間', sub: '学習セッションを記録してください' },
+          ]
+        : [
+            { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+            { label: '実際に使った時間 (AC)', value: `${m.ac.toFixed(2)} 時間`, sub: '記録したすべての学習セッションの合計' },
+            { label: 'コスト差異 (CV = EV − AC)', value: `${m.cv >= 0 ? '+' : ''}${m.cv.toFixed(2)} pt`, sub: m.cv >= 0 ? '予定より効率よく進んでいます' : '予定より時間がかかっています' },
+          ],
+      formula: noAC ? '（実績なし — 学習セッションを記録すると算出されます）' : `${m.ev.toFixed(2)} ÷ ${m.ac.toFixed(2)} = ${m.cpi.toFixed(2)}`,
+      formulaResult: noAC ? '—' : m.cpi.toFixed(2),
       resultColor: cpiColor,
     },
     forecast: {
@@ -304,22 +316,30 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         />
         <KPICard
           label="集中効率"
-          hint={hasData ? cpiToLabel(m.cpi) : '1.0 = 100% の効率'}
+          hint={
+            !hasData ? '1.0 = 100% の効率'
+            : noAC    ? 'まだ学習セッションがありません'
+            : cpiToLabel(m.cpi)
+          }
           techTerm="CPI"
-          value={hasData ? m.cpi.toFixed(2) : '—'}
-          sub={hasData
-            ? m.cv >= 0
-              ? `+${m.cv.toFixed(1)}h 効率よく進んでいます`
-              : `${Math.abs(m.cv).toFixed(1)}h 余分に時間がかかっています`
-            : undefined}
-          glow={hasData && m.cpi >= 1.0}
+          value={!hasData ? '—' : noAC ? '未着手' : m.cpi.toFixed(2)}
+          sub={
+            hasData && !noAC
+              ? m.cv >= 0
+                ? `+${m.cv.toFixed(1)}h 効率よく進んでいます`
+                : `${Math.abs(m.cv).toFixed(1)}h 余分に時間がかかっています`
+              : undefined
+          }
+          glow={hasData && !noAC && m.cpi >= 1.0}
           showTech={showTech}
           onClick={hasData ? () => setDetailModal('cpi') : undefined}
-          valueColor={hasData
-            ? m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
-            : m.cpi >= 0.9 ? 'text-amber-500'
-            : 'text-red-500'
-            : undefined}
+          valueColor={
+            !hasData || noAC
+              ? 'text-gray-400 dark:text-gray-500'
+              : m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
+              : m.cpi >= 0.9 ? 'text-amber-500'
+              : 'text-red-500'
+          }
         />
         <KPICard
           label="学習達成率"
