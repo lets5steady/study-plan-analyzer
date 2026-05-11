@@ -1,6 +1,14 @@
 // ─── Primitive enums ────────────────────────────────────────────────────────
 
 export type SubjectStatus = 'not_started' | 'in_progress' | 'completed' | 'paused';
+
+/**
+ * Which reschedule strategy was last applied.
+ *   deadline_first — keep the original target date; redistribute remaining work evenly from today.
+ *   pace_first     — accept current pace; set forecast completion date as the new target date and
+ *                    reset SPI to 1.0.
+ */
+export type RescheduleMode = 'deadline_first' | 'pace_first';
 export type SessionStatus = 'planned' | 'completed' | 'skipped';
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
@@ -143,6 +151,12 @@ export interface EVMMetrics {
   effectivePV: number;
   /** True when displaying delta (post-reschedule) values instead of absolute */
   isDeltaMode: boolean;
+  /**
+   * Estimated completion date derived from targetHoursPerWeek and total BAC.
+   * Set only when examDate is null; null otherwise.
+   * Used as the PV baseline anchor for subjects without a fixed target date.
+   */
+  provisionalEndDate: string | null;
 }
 
 // ─── App settings ─────────────────────────────────────────────────────────────
@@ -159,6 +173,8 @@ export interface AppSettings {
   /** ISO date (YYYY-MM-DD) of the most recent manual reschedule. Used to suppress the
    *  schedule-risk alert on the same day the user pressed "スケジュールを組み直す". */
   lastRescheduledAt: string | null;
+  /** Which reschedule mode was applied at the last reschedule. */
+  lastRescheduleMode: RescheduleMode | null;
   /**
    * Per-subject EV snapshot taken at the last reschedule/schedule-generation.
    * Used to compute delta SPI = (EV_now - EV_baseline) / (PV_since_reschedule)
@@ -200,6 +216,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   cpiWarningThreshold: 0.9,
   weeklyWorkPattern: DEFAULT_WEEKLY_WORK_PATTERN,
   lastRescheduledAt: null,
+  lastRescheduleMode: null,
   rescheduleBaselineEVs: {},
 };
 

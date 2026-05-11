@@ -73,6 +73,63 @@ export function computePV(
     .reduce((sum, e) => sum + e.allocatedHours, 0);
 }
 
+// ─── Provisional end-date estimation (no examDate) ───────────────────────────
+
+/**
+ * For a subject without an examDate, estimate a provisional completion date
+ * by dividing the total planned hours (BAC) by the weekly study target.
+ *
+ * Priority for weekly hours:
+ *   1. subject.targetHoursPerWeek  (per-subject override when > 0)
+ *   2. fallbackWeeklyHours         (AppSettings.defaultWeeklyHoursGoal)
+ *
+ * Returns null when the subject already has an examDate, BAC is zero,
+ * or no weekly hours can be determined.
+ */
+export function estimateProvisionalEndDate(
+  subject: Subject,
+  fallbackWeeklyHours: number,
+): string | null {
+  if (subject.examDate) return null;
+
+  const bac = subject.topics.reduce((s, t) => s + t.plannedHours, 0);
+  if (bac <= 0) return null;
+
+  const weeklyHours =
+    subject.targetHoursPerWeek > 0
+      ? subject.targetHoursPerWeek
+      : fallbackWeeklyHours;
+
+  if (weeklyHours <= 0) return null;
+
+  const daysNeeded = Math.ceil((bac / weeklyHours) * 7);
+  const start = new Date(subject.plannedStartDate);
+  const end = new Date(start);
+  end.setDate(end.getDate() + daysNeeded);
+
+  return end.toISOString().slice(0, 10);
+}
+
+/**
+ * Compute PV using a straight-line baseline between startDate and endDate.
+ * PV grows linearly from 0 at startDate to BAC at endDate.
+ */
+function computeLinearPV(
+  bac: number,
+  startDate: string,
+  endDate: string,
+  today: string,
+): number {
+  if (today <= startDate) return 0;
+  if (today >= endDate) return bac;
+
+  const startMs = new Date(startDate).getTime();
+  const endMs   = new Date(endDate).getTime();
+  const nowMs   = new Date(today).getTime();
+
+  return bac * ((nowMs - startMs) / (endMs - startMs));
+}
+
 // ─── Forecast completion date ─────────────────────────────────────────────────
 
 /**
@@ -118,7 +175,14 @@ export function computeEVMMetrics(
   const todayStr = toDateStr(today);
 
   const bac = computeBAC(subject);
-  const pv  = computePV(subject.id, schedule, todayStr);
+
+  // For subjects without a fixed examDate, use a linear PV baseline derived from
+  // targetHoursPerWeek so that PV grows at a steady rate toward the provisional end.
+  const provisionalEndDate = estimateProvisionalEndDate(subject, settings.defaultWeeklyHoursGoal);
+  const pv = !subject.examDate && provisionalEndDate
+    ? computeLinearPV(bac, subject.plannedStartDate, provisionalEndDate, todayStr)
+    : computePV(subject.id, schedule, todayStr);
+
   const ev  = computeEV(subject);
   const ac  = computeAC(subject.id, sessions);
 
@@ -198,6 +262,7 @@ export function computeEVMMetrics(
     effectiveEV,
     effectivePV,
     isDeltaMode,
+    provisionalEndDate: subject.examDate ? null : (provisionalEndDate ?? null),
   };
 }
 
@@ -224,6 +289,7 @@ export function computeTotalMetrics(
       effectiveEV: 0,
       effectivePV: 0,
       isDeltaMode: false,
+      provisionalEndDate: null,
     };
   }
 
@@ -268,5 +334,6 @@ export function computeTotalMetrics(
     effectiveEV,
     effectivePV,
     isDeltaMode,
+    provisionalEndDate: null,
   };
 }

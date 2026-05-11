@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { useStorageContext as useStorage } from '../context/StorageContext';
-import type { EVMMetrics, ScheduleEntry } from '../types';
+import type { EVMMetrics, ScheduleEntry, RescheduleMode } from '../types';
 import {
   computeEVMMetrics,
   computeTotalMetrics,
@@ -45,8 +45,22 @@ export interface UseEVMReturn {
   regenerateSchedule: () => void;
 
   /**
-   * Reschedule incomplete work from today onwards (triggered when SPI < 1).
+   * 期限厳守モード: Keep the original target date (examDate / provisionalEndDate) and
+   * redistribute all remaining work evenly from today onwards.
    * Preserves past entries as an audit trail.
+   */
+  rescheduleDeadlineFirst: () => void;
+
+  /**
+   * ペース優先モード: Accept the current completion pace by setting each subject's
+   * forecastCompletionDate as its new examDate, then regenerate the schedule and
+   * reset SPI to 1.0 via a fresh EV baseline.
+   */
+  reschedulePaceFirst: () => void;
+
+  /**
+   * @deprecated Use rescheduleDeadlineFirst() instead.
+   * Kept for backwards compatibility with callers that haven't been updated.
    */
   rescheduleFromToday: () => void;
 
@@ -132,7 +146,10 @@ export function useEVM(): UseEVMReturn {
     });
   }, [data.subjects, data.settings, today, updateData, snapshotBaselineEVs]);
 
-  const rescheduleFromToday = useCallback(() => {
+  // ── 期限厳守モード ────────────────────────────────────────────────────────
+  // Keep the original examDate / provisionalEndDate untouched.
+  // Redistribute all remaining work from today using the existing weekly pattern.
+  const rescheduleDeadlineFirst = useCallback(() => {
     const newSchedule = reschedule(
       data.schedule,
       data.subjects,
@@ -145,17 +162,49 @@ export function useEVM(): UseEVMReturn {
       settings: {
         ...data.settings,
         lastRescheduledAt: todayStr,
+        lastRescheduleMode: 'deadline_first' as RescheduleMode,
         rescheduleBaselineEVs: snapshotBaselineEVs(),
       },
     });
-  }, [
-    data.schedule,
-    data.subjects,
-    data.settings,
-    today,
-    updateData,
-    snapshotBaselineEVs,
-  ]);
+  }, [data.schedule, data.subjects, data.settings, today, updateData, snapshotBaselineEVs]);
+
+  // ── ペース優先モード ──────────────────────────────────────────────────────
+  // Accept the current pace: set each subject's forecastCompletionDate as its new
+  // examDate, regenerate the schedule from today, and reset SPI to 1.0 via a
+  // fresh EV baseline snapshot.
+  const reschedulePaceFirst = useCallback(() => {
+    const todayStr = today.toISOString().slice(0, 10);
+
+    // Update each active subject's examDate to its current forecast completion date.
+    const updatedSubjects = data.subjects.map((subject) => {
+      if (subject.status === 'completed') return subject;
+      const forecast = metricsMap[subject.id]?.forecastCompletionDate;
+      if (!forecast) return subject;
+      return { ...subject, examDate: forecast, updatedAt: new Date().toISOString() };
+    });
+
+    // Fresh schedule respecting the new examDates.
+    const newSchedule = generateSchedule(
+      updatedSubjects,
+      data.settings.weeklyWorkPattern,
+      today,
+    );
+
+    // Snapshot current EV as baseline → delta SPI starts at 0 / 0 → guarded to 1.0.
+    updateData({
+      subjects: updatedSubjects,
+      schedule: newSchedule,
+      settings: {
+        ...data.settings,
+        lastRescheduledAt: todayStr,
+        lastRescheduleMode: 'pace_first' as RescheduleMode,
+        rescheduleBaselineEVs: snapshotBaselineEVs(),
+      },
+    });
+  }, [data.subjects, data.settings, metricsMap, today, updateData, snapshotBaselineEVs]);
+
+  // ── 後方互換エイリアス ───────────────────────────────────────────────────
+  const rescheduleFromToday = rescheduleDeadlineFirst;
 
   const autoRescheduleIfNeeded = useCallback((): boolean => {
     if (!hasScheduleRisk) return false;
@@ -171,6 +220,7 @@ export function useEVM(): UseEVMReturn {
       settings: {
         ...data.settings,
         lastRescheduledAt: todayStr,
+        lastRescheduleMode: 'deadline_first' as RescheduleMode,
         rescheduleBaselineEVs: snapshotBaselineEVs(),
       },
     });
@@ -193,6 +243,8 @@ export function useEVM(): UseEVMReturn {
     hasScheduleRisk,
     hasTimeRisk,
     regenerateSchedule,
+    rescheduleDeadlineFirst,
+    reschedulePaceFirst,
     rescheduleFromToday,
     autoRescheduleIfNeeded,
   };
