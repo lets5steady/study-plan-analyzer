@@ -490,6 +490,7 @@ export function MetricsPanel({ onNavigate }: MetricsPanelProps) {
         spi={m.spi}
         cpi={m.cpi}
         isRescheduledToday={rescheduledToday}
+        lastRescheduleMode={lastMode}
         noSubjects={!hasData}
         noAC={noAC}
         onNavigate={onNavigate}
