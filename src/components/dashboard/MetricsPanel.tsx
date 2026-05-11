@@ -5,6 +5,7 @@ import { Badge, Modal, spiVariant, ProgressBar } from '../ui';
 import { cn } from '../../utils/cn';
 import { RescheduleAlert } from './RescheduleAlert';
 import { StatusDiagnosis } from './StatusDiagnosis';
+import { TodayTaskCard } from './TodayTaskCard';
 import type { RescheduleMode } from '../../types';
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
@@ -494,6 +495,9 @@ export function MetricsPanel({ onNavigate }: MetricsPanelProps) {
         onNavigate={onNavigate}
         onReschedule={() => setRescheduleModalOpen(true)}
       />
+
+      {/* 今日のタスク量 */}
+      <TodayTaskCard onReschedule={() => setRescheduleModalOpen(true)} />
 
       {/* 時間サマリ row */}
       {hasData && (
