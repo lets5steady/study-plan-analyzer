@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { cn } from '../../utils/cn';
 
 // ─── Button ───────────────────────────────────────────────────────────────────
@@ -127,42 +127,51 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, footer }: ModalProps) {
-  const ref = useRef<HTMLDialogElement>(null);
-
+  // ESC キーで閉じる
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (open) el.showModal(); else el.close();
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  // 背面スクロールをロック
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
   }, [open]);
 
   if (!open) return null;
 
   return (
-    <dialog
-      ref={ref}
-      onClose={onClose}
+    /* backdrop */
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-      className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85vh] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl backdrop:bg-black/40 p-0 flex flex-col"
     >
-      {/* header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none"
-        >
-          ✕
-        </button>
-      </div>
-      {/* body */}
-      <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
-      {/* footer */}
-      {footer && (
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 dark:border-gray-800">
-          {footer}
+      {/* modal card */}
+      <div className="w-full max-w-lg max-h-[85vh] rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl flex flex-col overflow-hidden">
+        {/* header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none"
+          >
+            ✕
+          </button>
         </div>
-      )}
-    </dialog>
+        {/* body */}
+        <div className="px-4 py-3 overflow-y-auto flex-1">{children}</div>
+        {/* footer */}
+        {footer && (
+          <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 dark:border-gray-800 shrink-0">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

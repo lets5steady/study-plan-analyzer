@@ -122,9 +122,43 @@ export function computeEVMMetrics(
   const ev  = computeEV(subject);
   const ac  = computeAC(subject.id, sessions);
 
-  const sv  = ev - pv;
-  // Guard: if no PV yet (schedule hasn't started), treat SPI as 1 (neutral).
-  const spi = pv === 0 ? 1 : ev / pv;
+  // ── SPI / SV: use delta from reschedule baseline when available ──────────
+  // After rescheduling, PV resets to "today onwards" while EV carries
+  // all historical completed work. Comparing them directly inflates SPI.
+  // Instead, measure only the progress *since* the last reschedule.
+  let spi: number;
+  let sv: number;
+
+  const baselineDate = settings.lastRescheduledAt;
+  const baselineEV   = settings.rescheduleBaselineEVs?.[subject.id] ?? undefined;
+
+  let effectiveEV: number;
+  let effectivePV: number;
+  let isDeltaMode = false;
+
+  if (baselineDate && baselineDate !== todayStr && baselineEV !== undefined) {
+    // Delta PV: schedule entries from baseline date to today
+    effectivePV = schedule
+      .filter((e) => e.subjectId === subject.id && e.date >= baselineDate && e.date <= todayStr)
+      .reduce((sum, e) => sum + e.allocatedHours, 0);
+    effectiveEV = Math.max(0, ev - baselineEV);
+    isDeltaMode = true;
+    spi = effectivePV === 0 ? 1 : effectiveEV / effectivePV;
+    sv  = effectiveEV - effectivePV;
+  } else if (baselineDate === todayStr) {
+    // Just rescheduled today — too early to evaluate; show neutral
+    effectiveEV = 0;
+    effectivePV = 0;
+    isDeltaMode = true;
+    spi = 1;
+    sv  = 0;
+  } else {
+    // No baseline: fall back to absolute EV/PV (first schedule, no reschedule yet)
+    effectiveEV = ev;
+    effectivePV = pv;
+    spi = pv === 0 ? 1 : ev / pv;
+    sv  = ev - pv;
+  }
 
   const cv  = ev - ac;
   // Guard: if no AC yet, CPI = 1 (neutral — no data to penalise or reward).
@@ -161,6 +195,9 @@ export function computeEVMMetrics(
     isOnTrack:
       spi >= settings.spiWarningThreshold &&
       cpi >= settings.cpiWarningThreshold,
+    effectiveEV,
+    effectivePV,
+    isDeltaMode,
   };
 }
 
@@ -184,6 +221,9 @@ export function computeTotalMetrics(
       percentComplete: 0,
       isOnTrack: true,
       forecastCompletionDate: null,
+      effectiveEV: 0,
+      effectivePV: 0,
+      isDeltaMode: false,
     };
   }
 
@@ -192,8 +232,14 @@ export function computeTotalMetrics(
   const ev  = all.reduce((s, m) => s + m.ev,  0);
   const ac  = all.reduce((s, m) => s + m.ac,  0);
 
-  const sv  = ev - pv;
-  const spi = pv  === 0 ? 1 : ev / pv;
+  // Aggregate effectiveEV/PV (delta values when in delta mode)
+  const effectiveEV = all.reduce((s, m) => s + m.effectiveEV, 0);
+  const effectivePV = all.reduce((s, m) => s + m.effectivePV, 0);
+  const isDeltaMode = all.some((m) => m.isDeltaMode);
+
+  // Aggregate SPI/SV from effective values for consistency with per-subject logic
+  const spi = effectivePV === 0 ? 1 : effectiveEV / effectivePV;
+  const sv  = effectiveEV - effectivePV;
   const cv  = ev - ac;
   const cpi = ac  === 0 ? 1 : ev / ac;
   const eac = cpi < 0.001 ? bac * 999 : bac / cpi;
@@ -219,5 +265,8 @@ export function computeTotalMetrics(
       spi >= settings.spiWarningThreshold &&
       cpi >= settings.cpiWarningThreshold,
     forecastCompletionDate,
+    effectiveEV,
+    effectivePV,
+    isDeltaMode,
   };
 }

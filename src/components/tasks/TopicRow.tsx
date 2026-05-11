@@ -9,6 +9,7 @@ import {
 import {
   VOLUME_OPTIONS, calcVolumeHours, formatVolumeTime, type VolumeId,
 } from '../../utils/learningModes';
+import { TopicSessionLog } from './TopicSessionLog';
 import type { Topic, SubjectStatus } from '../../types';
 
 // ─── Task type ────────────────────────────────────────────────────────────────
@@ -163,10 +164,14 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
   const completedSubs = topic.subtasks.filter((s) => s.completed).length;
   const totalSubs     = topic.subtasks.length;
 
-  const evEstimate =
-    totalSubs > 0
-      ? topic.plannedHours * (completedSubs / totalSubs)
-      : topic.plannedHours * (topic.completionPercent / 100);
+  // ヘッダーバー用: セッション実績時間（AC）をセッション一覧から直接計算
+  const sessionMins = data.sessions
+    .filter((s) => s.topicId === topic.id && s.status === 'completed')
+    .reduce((sum, s) => sum + s.actualDurationMinutes, 0);
+  const sessionHours = sessionMins / 60;
+  const acProgress   = topic.plannedHours > 0
+    ? Math.min(100, (sessionHours / topic.plannedHours) * 100)
+    : 0;
 
   const mainTasks = topic.subtasks.filter((s) => (s.type ?? 'main') === 'main');
   const subTasks  = topic.subtasks.filter((s) => s.type === 'sub');
@@ -210,11 +215,17 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
           <span className={cn('text-sm text-gray-400 transition-transform shrink-0', expanded ? 'rotate-180' : '')}>▼</span>
         </div>
 
-        {/* 下段: プログレスバー + 達成/予定時間 + 編集・削除ボタン */}
+        {/* 下段: 実績時間バー + 実績/予定時間 + 編集・削除ボタン */}
         <div className="flex items-center gap-2 mt-2 pl-[18px]">
-          <ProgressBar value={topic.completionPercent} className="flex-1 max-w-[100px] sm:max-w-xs" />
-          <span className="text-xs text-gray-400 hidden sm:inline ml-1" title="達成した学習量 (Earned Value)">
-            達成 {evEstimate.toFixed(1)}h ／予定 {topic.plannedHours}h
+          <ProgressBar
+            value={acProgress}
+            className="flex-1 max-w-[100px] sm:max-w-xs"
+            color={acProgress > 100 ? 'bg-amber-400' : 'bg-blue-400'}
+          />
+          <span className="text-xs text-gray-400 hidden sm:inline ml-1" title="学習記録に基づく実績時間">
+            {sessionHours > 0
+              ? `実績 ${sessionHours.toFixed(1)}h ／予定 ${topic.plannedHours}h`
+              : `予定 ${topic.plannedHours}h`}
           </span>
           <div className="flex items-center gap-0.5 ml-auto shrink-0">
             {/* 編集ボタン */}
@@ -452,33 +463,9 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
             </div>
           )}
 
-          {/* Actual hours + notes */}
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">実際に使った時間 (h)</span>
-              <input
-                type="number"
-                min={0} step={0.5}
-                value={topic.actualHours}
-                onChange={(e) => {
-                  const v = parseFloat(e.target.value);
-                  if (!isNaN(v) && v >= 0) mutate({ actualHours: v });
-                }}
-                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </label>
-            <div className="flex flex-col justify-end">
-              <span className="text-sm text-gray-400">予定 {topic.plannedHours}h</span>
-              <span className="text-sm text-gray-400">
-                {topic.actualHours > topic.plannedHours
-                  ? `予定より ${(topic.actualHours - topic.plannedHours).toFixed(1)}h 多くかかっています`
-                  : `あと ${(topic.plannedHours - topic.actualHours).toFixed(1)}h 余裕あり`}
-              </span>
-            </div>
-          </div>
-
+          {/* Topic memo */}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">メモ</span>
+            <span className="text-sm font-medium text-gray-500 dark:text-gray-400">トピックメモ</span>
             <textarea
               rows={2}
               value={topic.notes}
@@ -487,6 +474,15 @@ export function TopicRow({ subjectId, topic, onDeleteTopic }: TopicRowProps) {
               className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             />
           </label>
+
+          {/* Session-based study log */}
+          <div className="rounded-lg bg-white/70 dark:bg-gray-900/60 border border-emerald-100 dark:border-emerald-900/50 px-4 py-3">
+            <TopicSessionLog
+              topicId={topic.id}
+              subjectId={subjectId}
+              plannedHours={topic.plannedHours}
+            />
+          </div>
 
         </div>
       )}

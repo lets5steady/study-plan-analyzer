@@ -81,15 +81,15 @@ interface KPIDetailConfig {
 function DetailRow({ label, value, sub, highlight }: CalcRow) {
   return (
     <div className={cn(
-      'flex items-start justify-between gap-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0',
-      highlight && 'bg-emerald-50/50 dark:bg-emerald-900/10 -mx-4 px-4 rounded-lg',
+      'flex items-start justify-between gap-3 py-2 border-b border-gray-100 dark:border-gray-800 last:border-0',
+      highlight && 'bg-emerald-50/50 dark:bg-emerald-900/10 -mx-3 px-3 rounded-lg',
     )}>
-      <span className="text-sm text-gray-500 dark:text-gray-400 leading-snug">{label}</span>
-      <div className="text-right shrink-0">
-        <span className={cn('text-sm font-semibold tabular-nums', highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200')}>
+      <span className="flex-1 min-w-0 text-xs text-gray-500 dark:text-gray-400 leading-snug">{label}</span>
+      <div className="text-right shrink-0 ml-2">
+        <span className={cn('text-xs font-semibold tabular-nums', highlight ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-800 dark:text-gray-200')}>
           {value}
         </span>
-        {sub && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{sub}</p>}
+        {sub && <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -207,34 +207,56 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
     : null;
 
   // ── Detail modal configs ──────────────────────────────────────────────────
+  // AC=0 = 学習セッション未記録（未着手状態）
+  const noAC = hasData && m.ac === 0;
+
   const spiColor = m.spi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
     : m.spi >= 0.9 ? 'text-amber-500' : 'text-red-500';
-  const cpiColor = m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
+  const cpiColor = noAC
+    ? 'text-gray-400 dark:text-gray-500'
+    : m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
     : m.cpi >= 0.9 ? 'text-amber-500' : 'text-red-500';
+
+  // SPI の内訳表示用: リスケ後はデルタ値（増分EV/PV）を使う
+  const spiEV = m.effectiveEV;
+  const spiPV = m.effectivePV;
+  const spiEVLabel = m.isDeltaMode ? '達成した成果 (EV) ※リスケ以降' : '達成した成果 (EV)';
+  const spiPVLabel = m.isDeltaMode ? '予定していた成果 (PV) ※リスケ以降' : '予定していた成果 (PV)';
+  const spiPVSub   = m.isDeltaMode ? '最終リスケ日から本日までの計画量' : 'スケジュール上の本日までの計画量';
+  const spiSVSub   = m.sv >= 0 ? '計画より進んでいます' : '計画より遅れています';
 
   const detailConfigs: Record<Exclude<DetailModalType, null>, KPIDetailConfig> = {
     spi: {
       title: '進捗スピード (SPI) の内訳',
-      description: 'SPIは、予定していた学習量（PV）に対して、実際に達成した成果（EV）の割合を表します。1.0以上なら計画を上回るペース、1.0未満なら遅れている状態です。',
+      description: m.isDeltaMode
+        ? 'リスケ後の計画を基準に、リスケ以降の増分EV ÷ 増分PV で算出します。リスケ以前の完了作業はベースラインとして除外されます。'
+        : 'SPIは、予定していた学習量（PV）に対して、実際に達成した成果（EV）の割合を表します。1.0以上なら計画を上回るペース、1.0未満なら遅れている状態です。',
       rows: [
-        { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
-        { label: '予定していた成果 (PV)', value: `${m.pv.toFixed(2)} pt`, sub: 'スケジュール上の本日までの計画量' },
-        { label: 'スケジュール差異 (SV = EV − PV)', value: `${m.sv >= 0 ? '+' : ''}${m.sv.toFixed(2)} pt`, sub: m.sv >= 0 ? '計画より進んでいます' : '計画より遅れています' },
+        { label: spiEVLabel, value: `${spiEV.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+        { label: spiPVLabel, value: `${spiPV.toFixed(2)} pt`, sub: spiPVSub },
+        { label: 'スケジュール差異 (SV = EV − PV)', value: `${m.sv >= 0 ? '+' : ''}${m.sv.toFixed(2)} pt`, sub: spiSVSub },
       ],
-      formula: `${m.ev.toFixed(2)} ÷ ${m.pv.toFixed(2)} = ${m.spi.toFixed(2)}`,
-      formulaResult: m.spi.toFixed(2),
+      formula: spiPV === 0 ? `（計画初日 — 評価データなし）` : `${spiEV.toFixed(2)} ÷ ${spiPV.toFixed(2)} = ${m.spi.toFixed(2)}`,
+      formulaResult: spiPV === 0 ? '—' : m.spi.toFixed(2),
       resultColor: spiColor,
     },
     cpi: {
       title: '集中効率 (CPI) の内訳',
-      description: 'CPIは、実際に使った時間（AC）に対して、どれだけの成果（EV）を得られたかのコスパを表します。1.0以上なら予定より少ない時間で成果を出せている状態です。',
-      rows: [
-        { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
-        { label: '実際に使った時間 (AC)', value: `${m.ac.toFixed(2)} 時間`, sub: '記録したすべての学習セッションの合計' },
-        { label: 'コスト差異 (CV = EV − AC)', value: `${m.cv >= 0 ? '+' : ''}${m.cv.toFixed(2)} pt`, sub: m.cv >= 0 ? '予定より効率よく進んでいます' : '予定より時間がかかっています' },
-      ],
-      formula: `${m.ev.toFixed(2)} ÷ ${m.ac.toFixed(2)} = ${m.cpi.toFixed(2)}`,
-      formulaResult: m.cpi.toFixed(2),
+      description: noAC
+        ? 'まだ学習セッションが記録されていないため、CPI を算出できません。学習時間を記録すると自動的に計算されます。'
+        : 'CPIは、実際に使った時間（AC）に対して、どれだけの成果（EV）を得られたかのコスパを表します。1.0以上なら予定より少ない時間で成果を出せている状態です。',
+      rows: noAC
+        ? [
+            { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+            { label: '実際に使った時間 (AC)', value: '0.00 時間', sub: '学習セッションを記録してください' },
+          ]
+        : [
+            { label: '達成した成果 (EV)', value: `${m.ev.toFixed(2)} pt`, sub: '完了したトピック・タスクから計算' },
+            { label: '実際に使った時間 (AC)', value: `${m.ac.toFixed(2)} 時間`, sub: '記録したすべての学習セッションの合計' },
+            { label: 'コスト差異 (CV = EV − AC)', value: `${m.cv >= 0 ? '+' : ''}${m.cv.toFixed(2)} pt`, sub: m.cv >= 0 ? '予定より効率よく進んでいます' : '予定より時間がかかっています' },
+          ],
+      formula: noAC ? '（実績なし — 学習セッションを記録すると算出されます）' : `${m.ev.toFixed(2)} ÷ ${m.ac.toFixed(2)} = ${m.cpi.toFixed(2)}`,
+      formulaResult: noAC ? '—' : m.cpi.toFixed(2),
       resultColor: cpiColor,
     },
     forecast: {
@@ -294,22 +316,30 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         />
         <KPICard
           label="集中効率"
-          hint={hasData ? cpiToLabel(m.cpi) : '1.0 = 100% の効率'}
+          hint={
+            !hasData ? '1.0 = 100% の効率'
+            : noAC    ? 'まだ学習セッションがありません'
+            : cpiToLabel(m.cpi)
+          }
           techTerm="CPI"
-          value={hasData ? m.cpi.toFixed(2) : '—'}
-          sub={hasData
-            ? m.cv >= 0
-              ? `+${m.cv.toFixed(1)}h 効率よく進んでいます`
-              : `${Math.abs(m.cv).toFixed(1)}h 余分に時間がかかっています`
-            : undefined}
-          glow={hasData && m.cpi >= 1.0}
+          value={!hasData ? '—' : noAC ? '未着手' : m.cpi.toFixed(2)}
+          sub={
+            hasData && !noAC
+              ? m.cv >= 0
+                ? `+${m.cv.toFixed(1)}h 効率よく進んでいます`
+                : `${Math.abs(m.cv).toFixed(1)}h 余分に時間がかかっています`
+              : undefined
+          }
+          glow={hasData && !noAC && m.cpi >= 1.0}
           showTech={showTech}
           onClick={hasData ? () => setDetailModal('cpi') : undefined}
-          valueColor={hasData
-            ? m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
-            : m.cpi >= 0.9 ? 'text-amber-500'
-            : 'text-red-500'
-            : undefined}
+          valueColor={
+            !hasData || noAC
+              ? 'text-gray-400 dark:text-gray-500'
+              : m.cpi >= 1.0 ? 'text-emerald-600 dark:text-emerald-400'
+              : m.cpi >= 0.9 ? 'text-amber-500'
+              : 'text-red-500'
+          }
         />
         <KPICard
           label="学習達成率"
@@ -350,15 +380,15 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
           {(() => {
             const cfg = detailConfigs[detailModal];
             return (
-              <div className="space-y-5">
+              <div className="space-y-3">
                 {/* Description */}
-                <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800 rounded-xl px-4 py-3">
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-100 dark:border-emerald-800 rounded-xl px-3 py-2.5">
                   {cfg.description}
                 </p>
 
                 {/* Data rows */}
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">根拠データ</h3>
+                  <h3 className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">根拠データ</h3>
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
                     {cfg.rows.map((row) => (
                       <DetailRow key={row.label} {...row} />
@@ -367,15 +397,15 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
                 </div>
 
                 {/* Formula */}
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-4 py-4">
-                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">計算式</p>
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <code className="font-mono text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 px-3 py-3">
+                  <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">計算式</p>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <code className="font-mono text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700 break-all">
                       {cfg.formula}
                     </code>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400 dark:text-gray-500">結果</span>
-                      <span className={cn('text-2xl font-bold tabular-nums', cfg.resultColor)}>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">結果</span>
+                      <span className={cn('text-xl font-bold tabular-nums', cfg.resultColor)}>
                         {cfg.formulaResult}
                       </span>
                     </div>
@@ -387,16 +417,16 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         </Modal>
       )}
 
-      {/* ステータス診断 */}
-      {hasData && (
-        <StatusDiagnosis
-          spi={m.spi}
-          cpi={m.cpi}
-          isRescheduledToday={rescheduledToday}
-          onNavigate={onNavigate}
-          onReschedule={onReschedule}
-        />
-      )}
+      {/* ステータス診断 — 常に表示（未設定・未着手・通常状態を自動判別） */}
+      <StatusDiagnosis
+        spi={m.spi}
+        cpi={m.cpi}
+        isRescheduledToday={rescheduledToday}
+        noSubjects={!hasData}
+        noAC={noAC}
+        onNavigate={onNavigate}
+        onReschedule={onReschedule}
+      />
 
       {/* 時間サマリ row */}
       {hasData && (
@@ -472,15 +502,6 @@ export function MetricsPanel({ onNavigate, onReschedule }: MetricsPanelProps) {
         </div>
       )}
 
-      {/* Empty state */}
-      {data.subjects.length === 0 && (
-        <div className="text-center py-16 text-gray-400 dark:text-gray-600">
-          <svg className="w-14 h-14 mb-3 mx-auto text-gray-300 dark:text-gray-700" fill="none" viewBox="0 0 24 24" strokeWidth={1.2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-          </svg>
-          <p className="text-sm">プロジェクトを追加すると学習の進み具合が表示されます</p>
-        </div>
-      )}
     </div>
   );
 }
